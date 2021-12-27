@@ -1,3 +1,4 @@
+> /etc/nftables.rules
 cat << EOF > /etc/nftables.conf
 flush ruleset                                                                    
                                                                                  
