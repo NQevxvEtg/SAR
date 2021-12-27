@@ -1,0 +1,11 @@
+---
+- name: Update All Servers
+  become: yes
+  hosts: all
+  
+  tasks:
+  - name: Running Script
+    ansible.builtin.script: /home/user1/scripts/all/update.sh
+    register: Update
+
+  - debug: var=Update

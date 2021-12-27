@@ -1,0 +1,12 @@
+---
+- name: Update Arch Linux
+  become: yes
+  hosts: all
+  
+  tasks:
+  - name: Running Script
+    ansible.builtin.script: /home/user1/scripts/all/os.sh
+    register: OS
+
+  - debug: var=OS
+  

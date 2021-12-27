@@ -1,0 +1,16 @@
+---
+- name: Pull files
+  hosts: all
+  
+  tasks:
+   - name: Running Script
+     ansible.builtin.command: /usr/bin/cp /tmp/testfile /tmp/testfile-"{{ inventory_hostname }}"
+
+   - name: Synchronization using rsync protocol (pull)
+     ansible.posix.synchronize:
+       mode: pull
+       src: /tmp/testfile-"{{ inventory_hostname }}"
+       dest: /home/user1/data/incoming/
+
+
+

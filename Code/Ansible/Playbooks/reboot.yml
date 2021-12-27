@@ -1,0 +1,24 @@
+---
+- name: Reboot All Servers
+  become: yes
+  hosts: all
+  
+  tasks:
+  - name: Reboot
+    reboot:
+    async: 1
+    poll: 0
+
+  - name: Wait for the reboot to complete if there was a change.
+    wait_for_connection:
+      connect_timeout: 300
+      sleep: 5
+      delay: 5
+      timeout: 999999999
+
+  - name: Check the Uptime
+    shell: "uptime"
+    register: Uptime
+
+  - debug: var=Uptime
+  

@@ -1,0 +1,9 @@
+---
+- name: Shutdown All Servers
+  become: yes
+  hosts: all
+  
+  tasks:
+  - name: Unconditionally shut down the machine with all defaults
+    community.general.shutdown:
+  

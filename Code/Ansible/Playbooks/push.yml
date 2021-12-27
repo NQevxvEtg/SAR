@@ -1,0 +1,12 @@
+---
+- name: Send files
+  hosts: all
+  
+  tasks:
+   - name: Synchronization using rsync protocol (push)
+     ansible.posix.synchronize:
+       src: /home/user1/data/outgoing/testfile
+       dest: /tmp/
+
+
+
