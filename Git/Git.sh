@@ -10,6 +10,10 @@ git pull origin master
 git fetch --depth=1
 git fetch --unshallow
 
+git config --global user.email "you@example.com"
+git config --global user.name "Your Name"
+
+
 # ignore
 touch ~/.gitignore_global
 git config --global core.excludesfile ~/.gitignore_global
@@ -24,7 +28,7 @@ git status
 git add <file>
 
 # commit
-git commit -m "Message" 
+git commit -m "Message"
 
 # save credential for 15min
 git config --global credential.helper cache
@@ -44,11 +48,10 @@ git add -A
 git commit -m "made these changes"
 
 # for full message use, edit with vim
-git commit 
+git commit
 
 # setup ssh
 ssh-keygen -t rsa
 copy ~/.ssh/id_rsa.pub into https://github.com/settings/keys > SSH
 git remote show origin
 git remote set-url origin git+ssh://git@github.com/username/reponame.git
-

@@ -1,41 +1,47 @@
-> /etc/nftables.rules
 cat << EOF > /etc/nftables.conf
-flush ruleset                                                                    
-                                                                                 
+flush ruleset
+
 table inet firewall {
-                                                                                 
+
+    chain trace_chain {
+
+    type filter hook prerouting priority -1;
+    meta nftrace set 1
+
+  }
+
     chain inbound_ipv4 {
         # accepting ping (icmp-echo-request) for diagnostic purposes.
         # However, it also lets probes discover this host is alive.
         # This sample accepts them within a certain rate limit:
         #
-        # icmp type echo-request limit rate 5/second accept    
+        # icmp type echo-request limit rate 5/second accept
 		#
 		icmp type echo-request drop
     }
 
-    chain inbound_ipv6 {                                                         
+    chain inbound_ipv6 {
         # accept neighbour discovery otherwise connectivity breaks
         #
         icmpv6 type { nd-neighbor-solicit, nd-router-advert, nd-neighbor-advert } accept
-        #                                                                        
+        #
         # accepting ping (icmpv6-echo-request) for diagnostic purposes.
         # However, it also lets probes discover this host is alive.
         # This sample accepts them within a certain rate limit:
         #
         # icmpv6 type echo-request limit rate 5/second accept
 		#
-		icmpv6 type echo-request drop 
+		icmpv6 type echo-request drop
     }
 
-    chain inbound {                                                              
+    chain inbound {
 
         # By default, drop all traffic unless it meets a filter
         # criteria specified by the rules that follow below.
         type filter hook input priority 0; policy drop;
 
         # Allow traffic from established and related packets, drop invalid
-        ct state vmap { established : accept, related : accept, invalid : drop } 
+        ct state vmap { established : accept, related : accept, invalid : drop }
 
         # Allow loopback traffic.
         iifname lo accept
@@ -45,17 +51,17 @@ table inet firewall {
 
         # Allow SSH on port TCP/22 and allow HTTP(S) TCP/80 and TCP/443
         # for IPv4 and IPv6.
-        tcp dport { 80, 443 } accept
+        tcp dport { 80, 443, 3000 } accept
 
         # Uncomment to enable logging of denied inbound traffic
         # log prefix "[nftables] Inbound Denied: " counter drop
-    }                                                                            
-                                                                                 
-    chain forward {                                                              
-        # Drop everything (assumes this device is not a router)                  
-        type filter hook forward priority 0; policy drop;                        
-    }                                                                            
-}                                                                                 
+    }
+
+    chain forward {
+        # Drop everything (assumes this device is not a router)
+        type filter hook forward priority 0; policy accept;
+    }
+}
     # no need to define output chain, default policy is accept if undefined.
 EOF
 
@@ -66,5 +72,3 @@ systemctl stop nftables
 systemctl start nftables
 
 nft list ruleset
-
-
