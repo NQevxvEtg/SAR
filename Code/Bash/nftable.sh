@@ -51,7 +51,7 @@ table inet firewall {
 
         # Allow SSH on port TCP/22 and allow HTTP(S) TCP/80 and TCP/443
         # for IPv4 and IPv6.
-        tcp dport { 80, 443, 3000 } accept
+        tcp dport { 80, 443 } accept
 
         # Uncomment to enable logging of denied inbound traffic
         # log prefix "[nftables] Inbound Denied: " counter drop
