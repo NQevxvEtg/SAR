@@ -42,10 +42,10 @@ mount /dev/sda1 /boot/EFI
 grub-install --target=x86_64-efi --bootloader-id=grub_uefi --recheck
 cp /usr/share/locale/en\@quot/LC_MESSAGES/grub.mo /boot/grub/locale/en.mo
 
-python -c 'import modify; modify.replace(\
+python -c 'import modify; modify.replaceLineByLine(\
 "/etc/default/grub", \
 "GRUB_CMDLINE_LINUX_DEFAULT=", \
-"GRUB_CMDLINE_LINUX_DEFAULT=\"cryptdevice=/dev/sda3:volgroup0:allow-discards loglevel=3 quiet\""
+"GRUB_CMDLINE_LINUX_DEFAULT=\"cryptdevice=/dev/sda3:volgroup0:allow-discards loglevel=3 quiet\"\n" \
 )'
 
 grub-mkconfig -o /boot/grub/grub.cfg
