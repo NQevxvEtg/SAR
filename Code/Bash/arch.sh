@@ -2,7 +2,7 @@
 
 curl https://raw.githubusercontent.com/NQevxvEtg/SAR/main/Code/Bash/nftable.sh -o nftable.sh
 curl https://raw.githubusercontent.com/NQevxvEtg/SAR/main/Code/Bash/arch-chroot.sh -o arch-chroot.sh
-
+curl https://raw.githubusercontent.com/NQevxvEtg/SAR/main/Code/Python/modify.py -o modify.py
 # connect to network
 # echo -ne "station wlan0 scan\n station wlan0 connect SSID\n" | iwctl -P "password"
 # echo -ne "station wlan0 show\n" | iwctl

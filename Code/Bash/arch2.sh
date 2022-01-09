@@ -26,6 +26,7 @@ pacstrap /mnt base vim
 # chroot
 cp nftable.sh /mnt/nftable.sh
 cp arch-chroot.sh /mnt/arch-chroot.sh
+cp modify.py /mnt/modify.py
 
 chmod +x /mnt/nftable.sh
 chmod +x /mnt/arch-chroot.sh

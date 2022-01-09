@@ -62,7 +62,7 @@ swapon -a
 timedatectl set-timezone Etc/UTC
 hostnamectl set-hostname hostname
 
-pacman -S gnome gnome-extra
+pacman -S --noconfirm gnome gnome-extra
 
 
 systemctl enable NetworkManager
