@@ -2,7 +2,7 @@
 
 pacman -S --noconfirm linux linux-headers linux-lts linux-lts-headers base-devel linux-firmware \
 iwd networkmanager dhcpcd wpa_supplicant wireless_tools netctl dialog lvm2 \
-intel-ucode nvidia nvidia-lts vim nftables net-tools terminator firefox \
+intel-ucode nvidia nvidia-lts nftables net-tools terminator firefox \
 grub efibootmgr dosfstools os-prober mtools
 
 
