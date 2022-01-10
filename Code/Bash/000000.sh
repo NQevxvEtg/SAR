@@ -11,3 +11,9 @@ rsync -a --delete empty_dir/    yourdirectory/
 # access control list
 setfacl -m u:username:rwx ~/dir/
 setfacl -x u:username:rwx ~/dir/
+
+# fast symlink
+for d in /dir/*; do ln -s "$d" "$(basename $d)"; done
+
+# rsync hidden only
+rsync -uaP ~/.[^.]* /dest/

@@ -1,11 +1,11 @@
 #!/bin/bash
 
-curl https://raw.githubusercontent.com/NQevxvEtg/SAR/main/Code/Bash/arch-chroot.sh -o arch2.sh
+curl https://raw.githubusercontent.com/NQevxvEtg/SAR/main/Code/Bash/arch2.sh -o arch2.sh
 curl https://raw.githubusercontent.com/NQevxvEtg/SAR/main/Code/Bash/nftable.sh -o nftable.sh
 curl https://raw.githubusercontent.com/NQevxvEtg/SAR/main/Code/Bash/arch-chroot.sh -o arch-chroot.sh
 curl https://raw.githubusercontent.com/NQevxvEtg/SAR/main/Code/Python/modify.py -o modify.py
 
-chmod +x /mnt/arch2.sh
+chmod +x *.sh
 
 # connect to network
 # echo -ne "station wlan0 scan\n station wlan0 connect SSID\n" | iwctl -P "password"

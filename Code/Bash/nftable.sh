@@ -68,7 +68,5 @@ EOF
 
 
 systemctl enable nftables
-systemctl stop nftables
-systemctl start nftables
 
-nft list ruleset
+# nft list ruleset
