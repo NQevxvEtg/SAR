@@ -3,21 +3,11 @@
 pacman -S --noconfirm linux linux-headers linux-lts linux-lts-headers linux-zen linux-zen-headers linux-hardened linux-hardened-headers base-devel linux-firmware iwd networkmanager dhcpcd wpa_supplicant wireless_tools netctl dialog lvm2 intel-ucode nvidia nvidia-lts nftables net-tools terminator firefox git go keepassxc grub efibootmgr dosfstools os-prober mtools man rsync bash-completion atom adapta-gtk-theme materia-gtk-theme arc-gtk-theme arc-solid-gtk-theme gnome-themes-extra papirus-icon-theme noto-fonts noto-fonts-cjk noto-fonts-emoji
 
 # kernel
-python -c 'import modify; modify.replaceLineByLine(\
-"/etc/mkinitcpio.conf", \
-"^HOOKS=", \
-"HOOKS=(base udev autodetect modconf block encrypt lvm2 filesystems keyboard fsck)"
-)'
-
+sed -i "s/HOOKS=.*/HOOKS=(base udev autodetect modconf block encrypt lvm2 filesystems keyboard fsck)/g" /etc/mkinitcpio.conf
 mkinitcpio -P
 
 # locale
-python -c 'import modify; modify.replace(\
-"/etc/locale.gen", \
-"#en_US.UTF-8 UTF-8", \
-"en_US.UTF-8 UTF-8"
-)'
-
+sed -i "s/#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g" /etc/locale.gen
 locale-gen
 
 # user changeme
@@ -25,11 +15,8 @@ echo "root:password" | chpasswd
 useradd -m -g  users -G wheel username
 echo "username:password" | chpasswd
 
-python -c 'import modify; modify.replace(\
-"/etc/sudoers", \
-"# %wheel ALL=\(ALL\) ALL", \
-"%wheel ALL=(ALL) ALL"
-)'
+# sudo
+sed -i "s/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/g" /etc/sudoers
 
 # grub
 mkdir /boot/EFI
@@ -37,13 +24,7 @@ mount /dev/sda1 /boot/EFI
 
 grub-install --target=x86_64-efi --bootloader-id=grub_uefi --recheck
 cp /usr/share/locale/en\@quot/LC_MESSAGES/grub.mo /boot/grub/locale/en.mo
-
-python -c 'import modify; modify.replaceLineByLine(\
-"/etc/default/grub", \
-"GRUB_CMDLINE_LINUX_DEFAULT=", \
-"GRUB_CMDLINE_LINUX_DEFAULT=\"cryptdevice=/dev/sda3:volgroup0:allow-discards loglevel=3 quiet\"\n" \
-)'
-
+sed -i "s/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"cryptdevice=/dev/sda3:volgroup0:allow-discards loglevel=3 quiet\"/g" /etc/default/grub
 grub-mkconfig -o /boot/grub/grub.cfg
 
 # swap changeme
