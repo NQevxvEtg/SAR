@@ -10,7 +10,7 @@ chmod +x *.sh
 # echo -ne "station wlan0 scan\n station wlan0 connect SSID\n" | iwctl -P "password"
 # echo -ne "station wlan0 show\n" | iwctl
 
-# setup disk
+# setup disk changeme
 echo -ne "g\nn\n\n\n+500M\nt\n1\nn\n\n\n+1G\nn\n\n\n\nt\n3\n30\nw\n" | fdisk /dev/sda
 
 # format disk

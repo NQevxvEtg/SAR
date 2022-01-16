@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# change everything
+
 # setup lvm
 pvcreate --dataalignment 1m /dev/mapper/lvm
 vgcreate vg0 /dev/mapper/lvm
@@ -26,9 +28,5 @@ pacstrap /mnt base vim
 # chroot
 cp nftable.sh /mnt/nftable.sh
 cp arch-chroot.sh /mnt/arch-chroot.sh
-cp modify.py /mnt/modify.py
-
-chmod +x /mnt/nftable.sh
-chmod +x /mnt/arch-chroot.sh
 
 arch-chroot /mnt
