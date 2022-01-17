@@ -17,3 +17,7 @@ for d in /dir/*; do ln -s "$d" "$(basename $d)"; done
 
 # rsync hidden only
 rsync -uaP ~/.[^.]* /dest/
+
+# clear cuda
+sudo fuser -v /dev/nvidia*
+sudo kill -9 PID.
