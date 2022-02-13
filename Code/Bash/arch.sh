@@ -19,5 +19,5 @@ mkfs.xfs -f /dev/sda2
 
 # encrypt disk changeme
 
-# cryptsetup luksFormat /dev/sda3
-# cryptsetup open --type luks /dev/sda3 lvm
+echo "password" | cryptsetup -q luksFormat /dev/sda3
+echo "password" | cryptsetup open --type luks /dev/sda3 lvm
