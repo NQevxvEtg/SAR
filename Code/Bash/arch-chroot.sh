@@ -2,6 +2,9 @@
 
 pacman -S --noconfirm linux linux-headers linux-lts linux-lts-headers base-devel linux-firmware iwd networkmanager dhcpcd wpa_supplicant wireless_tools netctl dialog lvm2 intel-ucode nvidia nvidia-lts nftables net-tools terminator firefox git go keepassxc grub efibootmgr dosfstools os-prober mtools man rsync bash-completion atom adapta-gtk-theme materia-gtk-theme arc-gtk-theme arc-solid-gtk-theme gnome-themes-extra papirus-icon-theme noto-fonts noto-fonts-cjk noto-fonts-emoji
 
+pacman -S --noconfirm gnome gnome-extra
+pacman -S --noconfirm sudo
+
 # kernel
 sed -i "s/HOOKS=.*/HOOKS=(base udev autodetect modconf block encrypt lvm2 filesystems keyboard fsck)/g" /etc/mkinitcpio.conf
 mkinitcpio -P
@@ -25,6 +28,7 @@ mount /dev/sda1 /boot/EFI
 grub-install --target=x86_64-efi --bootloader-id=grub_uefi --recheck
 cp /usr/share/locale/en\@quot/LC_MESSAGES/grub.mo /boot/grub/locale/en.mo
 sed -i "s/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"cryptdevice=\/dev\/sda3:volgroup0:allow-discards loglevel=3 quiet\"/g" /etc/default/grub
+sed -i "s/GRUB_DEFAULT=.*/GRUB_DEFAULT=\"1>2\"/g" /etc/default/grub
 grub-mkconfig -o /boot/grub/grub.cfg
 
 # swap changeme
@@ -38,8 +42,6 @@ swapon -a
 # changeme
 timedatectl set-timezone Etc/UTC
 hostnamectl set-hostname hostname
-
-pacman -S --noconfirm gnome gnome-extra
 
 
 systemctl enable NetworkManager

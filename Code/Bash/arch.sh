@@ -18,6 +18,6 @@ mkfs.fat -F32 /dev/sda1
 mkfs.xfs -f /dev/sda2
 
 # encrypt disk changeme
-
-echo "password" | cryptsetup -q luksFormat /dev/sda3
-echo "password" | cryptsetup open --type luks /dev/sda3 lvm
+devpass="password"
+echo $devpass | cryptsetup -q luksFormat /dev/sda3
+echo $devpass | cryptsetup open --type luks /dev/sda3 lvm
