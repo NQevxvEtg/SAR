@@ -2,7 +2,7 @@
 
 pacman -S --noconfirm linux linux-headers linux-lts linux-lts-headers base-devel linux-firmware iwd networkmanager dhcpcd wpa_supplicant wireless_tools netctl dialog lvm2 intel-ucode nvidia nvidia-lts nftables net-tools terminator firefox git go keepassxc grub efibootmgr dosfstools os-prober mtools man rsync bash-completion atom adapta-gtk-theme materia-gtk-theme arc-gtk-theme arc-solid-gtk-theme gnome-themes-extra papirus-icon-theme noto-fonts noto-fonts-cjk noto-fonts-emoji
 
-pacman -S --noconfirm gnome gnome-extra
+pacman -S --noconfirm gnome
 pacman -S --noconfirm sudo
 
 # kernel
