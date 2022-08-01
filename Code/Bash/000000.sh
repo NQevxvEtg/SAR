@@ -21,3 +21,6 @@ rsync -uaP ~/.[^.]* /dest/
 # clear cuda
 sudo fuser -v /dev/nvidia*
 sudo kill -9 PID.
+
+mount -t cifs -o username=username,password=password,domain=domain //0.0.0.0/repository /path/repository
+
