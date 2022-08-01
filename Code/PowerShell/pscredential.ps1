@@ -1,3 +1,11 @@
+$params = @{
+    Name            = 'vault_name'
+    ModuleName      = 'Microsoft.PowerShell.SecretStore'
+    DefaultVault    = $true
+    AllowClobber    = $true
+}
+Register-SecretVault @params
+
 Register-SecretVault -Name vault_name -ModuleName Microsoft.PowerShell.SecretStore -DefaultVault -AllowClobber
 
 Set-Secret -name username -secret (get-credential username)
