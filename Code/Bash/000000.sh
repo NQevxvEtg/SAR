@@ -37,5 +37,11 @@ ss -ant | grep -E ':80|:443' | wc -l
 
 watch -n 1 "ss -ant | grep -E ':80|:443' | wc -l"
 
+for i in $(find / -xdev -perm -4000 -type f -o -perm -2000 -type f); do echo $i && grep $i /etc/audit/audit.rules; done
+
+netstat -tn 2>/dev/null | grep :443 | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -nr | head
+netstat -tn 2>/dev/null | grep :80 | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -nr | head
+
+
 
 
