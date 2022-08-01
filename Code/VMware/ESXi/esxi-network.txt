@@ -7,7 +7,7 @@ Configure Management Network
 		IPv4 Configuration
 			Set static
 			IPv4 Address	0.0.0.0
-			Subnet Mask		0.0.0.0
+			Subnet Mask	0.0.0.0
 			Default Gateway	0.0.0.0
 		DNS Configuration
 			Primary		0.0.0.0
