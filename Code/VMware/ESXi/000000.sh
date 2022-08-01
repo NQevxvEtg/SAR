@@ -95,6 +95,10 @@ Get-Datastore -ID vm-000000 | ft -Property Name,ID -AutoSize
 
 New-VICredentialStoreItem -Host fqdn.domain -User "username" -Password 'password' -File \\auth.xml
 
+esxcli software vib list
+esxcli software vib update -d /vmfs/volumes/DEV/update.zip
+
+
 
 
 
