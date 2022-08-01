@@ -1,0 +1,38 @@
+Configure Management Network
+	Network Adapters
+		Network Adapters	
+			[x] vmnic
+		VLAN
+			000
+		IPv4 Configuration
+			Set static
+			IPv4 Address	0.0.0.0
+			Subnet Mask		0.0.0.0
+			Default Gateway	0.0.0.0
+		DNS Configuration
+			Primary		0.0.0.0
+			Alternate	0.0.0.0
+			Hostname	hostname
+			
+Go to networking
+	SWNAME
+		Add and Manage Hosts
+			Configure host with uplink for both physical nics
+Go to hosts
+	Configure
+		Networking
+			VMkernel adapters
+				Add Networking
+					vmk0 Network1
+					vmk1 Network2
+					vmk2 Network3
+					vmk3 Network4
+					vmk4 vxw-vmknicPg (DO NOT ADD, SEE BELOW)
+					
+For NSX (vmk4 vxw-vmknicPg) virutal nic. 
+	SSH into ESXi shell
+	esxcli software vib remove --vibname=esx-nsxv
+	reboot
+	When the ESXi comes up, NSX will automatically install the latest vib and create (vmk4 vxw-vmknicPg)
+	
+
