@@ -90,6 +90,9 @@ cat /home/user1/hosts.txt | xargs -t -I {} ssh-keyscan -H {} >> /home/user1/.ssh
 cat /home/user1/hosts.txt | xargs -t -I {} sshpass -p Outland ssh-copy-id user1@{}
 ansible all -a "uptime" -f 10 -v
 
+# fix human readable -------------------------------------------------------------
+# Ansible 2.4+ has built-in support for human-readable results: Temporarily by setting ANSIBLE_STDOUT_CALLBACK=debug in the environment export ANSIBLE_STDOUT_CALLBACK=debug or permanently by setting stdout_callback=debug in the [default] section of ansible.cfg [default] 
+# human-readable stdout/stderr results display stdout_callback = debug From Github – imjoseangel Apr 25, 2018 at 18:11 
 
 
 
