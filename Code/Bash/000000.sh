@@ -42,6 +42,6 @@ for i in $(find / -xdev -perm -4000 -type f -o -perm -2000 -type f); do echo $i 
 netstat -tn 2>/dev/null | grep :443 | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -nr | head
 netstat -tn 2>/dev/null | grep :80 | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -nr | head
 
-
-
+# user different algo
+sshpass -p password ssh -oKexAlgorithms=+algo_name username@domain
 
