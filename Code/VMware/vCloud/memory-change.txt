@@ -1,0 +1,7 @@
+cd /opt/vmware/vcloud-director/bin/
+
+vim vmware-vcd-cell-common
+
+Changed -Xmx0000M to -Xmx0001M # change this lol
+
+${JAVA_OPTS:--Xmx0000M -Xmx0001M -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${VCLOUD_HOME}/logs} \   # change this lol
