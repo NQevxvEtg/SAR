@@ -1,0 +1,15 @@
+Smart Card CAC/PIV Login for Logical Access
+
+1. The PC sends the user/password to local lsas for Kerberos authentication.
+2. Kerberos sends the certificate to the local CAPI store
+3. CAPI replies back to Kerberos
+4. Kerberos sends an authentication request to the Microsoft DC
+5. The Microsoft DC's Kerberos sends the request to DC's CAPI store
+6. The DC's CAPI store replies back to DC Kerberos
+7. The DC sends a certificate validation request to DV.
+8. DV checks the user's CA
+9. CA replies back to DV
+10. DV replies back to the DC's CAPI
+11. The DC's CAPI replies back to DC Kerberos
+12. The DC's Kerberos replies with an authentication status to the Client Kerberos
+13. The local lsas notifies user's PC whether or not they can log on. 
