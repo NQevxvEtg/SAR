@@ -1,4 +1,5 @@
 # THIS SCRIPT NEEDS TO BE RUN TWICE
+$VIServer = 'fqdn'
 Connect-VIServer -Server $VIServer -Protocol https -Credential (Get-Secret vcenter)
 
 $allowedIPs=@(
