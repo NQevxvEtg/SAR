@@ -1,0 +1,7 @@
+LGPO.exe /b path [/n GPO-display-name]
+
+.\LGPO.exe /b "path"
+
+.\LGPO.exe /g "path\{gpo-machine-folder-name}"
+
+.\LGPO.exe /g "path\{gpo-user-folder-name}"
