@@ -1,0 +1,154 @@
+https://techcommunity.microsoft.com/t5/storage-at-microsoft/how-to-nfs-kerberos-configuration-with-linux-client/ba-p/424552
+
+yum install krb5-workstation krb5-libs krb5-auth-dialog nss-pam-ldapd
+yum install ssdomain realmd oddjob oddjob-mkhomedir adcli krb5-workstation openldap-clients policycoreutils-python samba-common-tools -y
+
+
+modprobe rpcsec_gss_krb5
+
+rpc.gsdomain start
+#----------------------------------------------------------------------------------------------
+# Add Linux machine to DNS in DC
+
+DC
+	Forward Lookup Zones
+		domain.fqdn
+#----------------------------------------------------------------------------------------------		
+# Join Linux machine to the domain
+realm join --user=username fqdn.domain
+
+vim /etc/ssdomain/ssdomain.conf
+use_fully_qualified_names = False
+fallback_homedir = /home/%u
+systemctl restart ssdomain
+#----------------------------------------------------------------------------------------------		
+vim /etc/ssh/sshd_config
+
+GSSAPIAuthentication yes
+
+systemctl restart sshd
+#----------------------------------------------------------------------------------------------	
+cp krb5.conf krb5.conf.bak
+vim /etc/krb5.conf
+
+# Configuration snippets may be placed in this directory as well
+includedir /etc/krb5.conf.d/
+
+[logging]
+ default = FILE:/var/log/krb5libs.log
+ kdc = FILE:/var/log/krb5kdc.log
+ admin_server = FILE:/var/log/kadmind.log
+
+[libdefaults]
+ dns_lookup_realm = false
+ ticket_lifetime = 24h
+ renew_lifetime = 7d
+ forwardable = true
+ rdns = false
+ pkinit_anchors = FILE:/etc/pki/tls/certs/ca-bundle.crt
+ default_realm = fqdn.domain
+ default_ccache_name = KEYRING:persistent:%{uid}
+ default_tkt_enctypes = aes256-cts-hmac-sha1-96
+
+[realms]
+fqdn.domain = {
+ kdc = domaincontroller.fqdn.domain
+ admin_server = domaincontroller.fqdn.domain
+}
+
+[domain_realm]
+.fqdn.domain = fqdn.domain
+fqdn.domainm = fqdn.domain
+#----------------------------------------------------------------------------------------------
+# Configure Kerberos service principal name
+
+setspn -A nfs/nfsserver nfsserver
+setspn -A nfs/nfsserver.fqdn.domain nfsserver
+#----------------------------------------------------------------------------------------------
+	  
+# in active directory administrative center
+# first name and full name: nfsclient-nfs 
+# user upn logon: nfs/nfsclient.fqdn.domain
+# user samaccountname: domain\nfsclient-nfs
+# encryption options > other encryption options > select this account supports kerberos aes 256 bit encryption
+# encryption options > other options > select do not require kerberos pre-authentication
+#----------------------------------------------------------------------------------------------
+
+setspn -A nfs/nfsclient nfsclient-nfs
+setspn -A nfs/nfsclient.fqdn.domain nfsclient-nfs
+#----------------------------------------------------------------------------------------------
+ktpass -princ nfs/nfsclient.fqdn.domain@fqdn.domain -mapuser nfsclient-nfs -pass password -crypto All -out \\nfs.keytab
+#----------------------------------------------------------------------------------------------
+ktutil
+ktutil:  rkt nfs.keytab
+ktutil:  wkt /etc/krb5.keytab
+ktutil:  q
+#----------------------------------------------------------------------------------------------
+
+kinit -k nfs/nfsclient.fqdn.domain
+#----------------------------------------------------------------------------------------------
+
+
+New-NfsShare -Name nfs_share -Path \nfs_share -Authentication krb5,krb5i,krb5p -EnableAnonymousAccess 0 -EnableUnmappedAccess 0 -Permission readwrite
+
+manage-bde -lock driveletter: -forcedismount
+
+#----------------------------------------------------------------------------------------------
+nslookup -type=srv _ldap._tcp.fqdn.domain
+dsquery *
+#----------------------------------------------------------------------------------------------
+cp /etc/idmapd.conf /etc/idmapd.conf.bak
+vim /etc/idmapd.conf
+
+[General]
+Verbosity = 7
+Pipefs-Directory=/var/lib/nfs/rpc_pipefs
+Domain = fqdn.domain
+
+[Mapping]
+Nobody-User = username
+Nobody-Group = username
+
+[Translation]
+Method = nsswitch
+
+[UMICH_SCHEMA]
+LDAP_server = domaincontroller.fqdn.domain
+LDAP_base = dc=domain,dc=domain,dc=domain,dc=domain,dc=domain
+
+/bin/systemctl restart rpcidmapd.service
+
+#----------------------------------------------------------------------------------------------
+authconfig-tui
+#----------------------------------------------------------------------------------------------
+# from active directory > find a domain user > properties > attribute editor > distinguishedname
+# this will be the binddn for the next section
+#----------------------------------------------------------------------------------------------
+vim /etc/nslcd.conf 
+
+binddn cn=labman.dom,ou=domain Domain Admins,dc=domain,dc=domain,dc=domain,dc=domain,dc=domain
+bindpw passwd
+tls_reqcert never
+ssl no
+tls_cacertdir /etc/openldap/cacerts
+systemctl restart nslcd
+#----------------------------------------------------------------------------------------------
+mount -o sec=krb5 nfsserver:/nfs_share  /mnt/nfs
+
+# umount -f -l /mnt/nfs
+#----------------------------------------------------------------------------------------------
+
+su -s /bin/bash username
+
+kinit nfs/nfsclient.fqdn.domain
+
+#----------------------------------------------------------------------------------------------
+
+nfsserver:/nfs_share         /mnt/nfs        nfs     rw      0 0
+
+
+# device       mountpoint     fs-type     options      dump fsckorder
+   ...
+   ip.ip.ip.ip:/home  /mnt    nfs          rw            0    0
+   
+   
