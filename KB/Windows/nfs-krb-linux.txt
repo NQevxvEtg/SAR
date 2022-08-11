@@ -89,7 +89,7 @@ kinit -k nfs/nfsclient.fqdn.domain
 #----------------------------------------------------------------------------------------------
 
 
-New-NfsShare -Name nfs_share -Path \nfs_share -Authentication krb5,krb5i,krb5p -EnableAnonymousAccess 0 -EnableUnmappedAccess 0 -Permission readwrite
+New-NfsShare -Name nfs_share -Path \nfs_share -Authentication krb5,krb5i,krb5p -EnableAnonymousAccess 0 -EnableUnmappedAccess 0 -AllowRootAccess 1 -Permission readwrite
 
 manage-bde -lock driveletter: -forcedismount
 
