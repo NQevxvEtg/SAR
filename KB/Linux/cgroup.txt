@@ -1,0 +1,25 @@
+apt install cgroup-tools
+cp /usr/share/doc/cgroup-tools/examples/cgred.conf /etc/
+touch /etc/cgconfig.conf
+touch /etc/cgrules.conf
+#------------------------------------------------------------------------------
+vim /etc/cgconfig.conf
+
+group app/appname {
+     cpu {
+         cpu.shares = 700;
+         cpu.cfs_quota_us=70000;
+     }
+}
+#------------------------------------------------------------------------------
+vim /etc/cgrules.conf
+
+*:<binarynamereplaceme>    cpu     app/appname/
+#------------------------------------------------------------------------------
+cgconfigparser -l /etc/cgconfig.conf && sudo cgrulesengd
+cgget -g cpu:app/appname
+vim /etc/systemd/system/cgconfigparser.service
+vim /etc/systemd/system/cgrulesgend.service
+sudo systemctl daemon-reload && sudo systemctl enable cgconfigparser --now && sudo systemctl enable cgrulesgend --now
+vim /etc/cgconfig.conf
+systemctl restart cgconfigparser && systemctl restart cgrulesgend
