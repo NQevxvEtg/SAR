@@ -100,5 +100,16 @@ esxcli software vib update -d /vmfs/volumes/DEV/update.zip
 
 
 
-
+esxcli system maintenanceMode get
+# Disabled
+esxcli system maintenanceMode set --enable false
+# Maintenance mode is already disabled.
+esxcli system maintenanceMode set --enable true 
+esxcli system maintenanceMode get
+# Enabled
+esxcli system maintenanceMode set --enable true
+# Maintenance mode is already enabled.
+esxcli system maintenanceMode set --enable false
+esxcli system maintenanceMode get
+# Disabled
 
