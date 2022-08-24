@@ -10,7 +10,7 @@ git pull origin master
 git fetch --depth=1
 git fetch --unshallow
 
-git config --global user.email "you@example.com"
+git config --global user.email "public-email@example.com"
 git config --global user.name "Your Name"
 
 
