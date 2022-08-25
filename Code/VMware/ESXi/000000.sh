@@ -113,3 +113,8 @@ esxcli system maintenanceMode set --enable false
 esxcli system maintenanceMode get
 # Disabled
 
+
+esxcli software vib install -v /vmfs/volumes/uuid/dir/example.vib
+
+
+
