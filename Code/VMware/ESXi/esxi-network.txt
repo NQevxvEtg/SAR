@@ -18,6 +18,7 @@ Go to networking
 	SWNAME
 		Add and Manage Hosts
 			Configure host with uplink for both physical nics
+			if virtual switch, then reassign vmk0 to management network and migrate virtual switch
 Go to hosts
 	Configure
 		Networking
@@ -36,3 +37,4 @@ For NSX (vmk4 vxw-vmknicPg) virutal nic.
 	When the ESXi comes up, NSX will automatically install the latest vib and create (vmk4 vxw-vmknicPg)
 	
 
+continue to esxi gui and finish chap authentication under san menu
