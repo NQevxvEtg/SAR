@@ -1,0 +1,11 @@
+backup database dbname to disk = 'c:\path\dbname.bak' with stats=10, compression, init
+
+go
+
+use dbname
+
+go
+
+checkpoint
+
+go
