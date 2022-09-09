@@ -1,6 +1,6 @@
 Get-CimInstance -ClassName Win32_ComputerSystem -ComputerName hostname
 
-# linux tail like
+# linux tail -f like
 Get-Content -Path "file.log" -Wait
 
 # remove software
