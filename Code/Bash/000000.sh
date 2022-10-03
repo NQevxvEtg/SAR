@@ -1,4 +1,8 @@
+# disable password aging
+chage -m 0 -M 99999 -I -1 -E -1 username
 
+# set account expiration
+chage -E "2022-02-02" username
 
 # find image
 find . -name '*' -exec file {} \; | grep -o -P '^.+: \w+ image'
