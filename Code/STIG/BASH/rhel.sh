@@ -7,4 +7,5 @@ while read p; do
 FILENAME=$(awk '{ print $1 }')
 RPMNAME=$(rpm -qf $FILENAME)
 rpm --setugids $RPMNAME
+rpm --setperms $RPMNAME
 done < output.txt
