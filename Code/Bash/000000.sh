@@ -1,3 +1,6 @@
+# /etc/firewalld/zones
+firewall-cmd --permanent --remove-service=dhcpv6-client &&  firewall-cmd --reload && firewall-cmd --list-all
+
 # disable password aging
 chage -m 0 -M 99999 -I -1 -E -1 username
 
