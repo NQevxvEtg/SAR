@@ -1,0 +1,7 @@
+./install.sh -i
+
+/opt/McAfee/agent/bin/maconfig -provision -managed -auto -dir /var/McAfee/agent/keystore -epo <ipaddress>:<portnumber>
+
+tail -f /var/McAfee/agent/logs/masvc_<servername>.log
+
+/opt/McAfee/agent/bin/cmdagent -p
