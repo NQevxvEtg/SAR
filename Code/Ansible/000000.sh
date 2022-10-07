@@ -82,6 +82,9 @@ select yn in "Yes" "No"; do
     esac
 done
 
+# Copy the key to a server 
+ssh-copy-id -i ~/.ssh/pubkey username@host
+
 ansible all -a "rm -fr /home/user1/.ssh" -f 10 -v
 rm -fr /home/user1/.ssh
 ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<y >/dev/null 2>&1
