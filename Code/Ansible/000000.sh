@@ -49,9 +49,12 @@ ansible-playbook /home/user1/playbooks/all/push.yml -K -f 10 -v
 
 ansible-playbook /home/user1/playbooks/all/pull.yml -K -f 10 -v
 
-
+ansible-playbook playbooks/example.yml -e 'ansible_python_interpreter=/usr/bin/python' -l <specific host or group> -K -f 10 -v | tee log.txt
 
 ansible centos -m ping -e 'ansible_python_interpreter=/usr/bin/python3'
+
+# permission denied? 
+semanage login -d <ansible username>
 
 # vault Commands -------------------------------------------------------------
 
