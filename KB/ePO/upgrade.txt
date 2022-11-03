@@ -1,0 +1,35 @@
+ess process in order
+
+Service MCAFEEAPACHESRV is not in stopped state.
+Service MCAFEEEVENTPARSERSRV is not in stopped state.
+
+McAfee recommends : 
+	1. Stop the ePolicy Orchestrator Server Service and ePolicy Orchestrator Event Parser Service.
+	2. Restart the ePolicy Orchestrator Application Server Service. <---------- this need to be started, sometimes the restart doesn't work, so manually start it
+	
+	
+https://kcm.trellix.com/corporate/index?page=content&id=kb51431
+reboot
+
+https://kcm.trellix.com/corporate/index?page=content&id=KB91816
+
+https://kcm.trellix.com/corporate/index?page=content&id=KB91477
+
+https://kcm.trellix.com/corporate/index?page=content&id=KB91822
+add this in mmc
+
+https://kcm.trellix.com/corporate/index?page=content&id=KB91479
+
+use dbatools for force encryption
+
+https://fqdn:port/remote/EPOCore.RebuildIndexesCommand?mode=1&table=Few
+https://fqdn:port/remote/EPOCore.RebuildIndexesCommand?mode=1&table=All
+reboot
+
+
+Menu>Software>Extensions 
+Remove incompatible software
+
+Disable McAfee Threat Prevention before starting! 
+
+
