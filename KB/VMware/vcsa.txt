@@ -1,0 +1,11 @@
+If Converting data as part of post install fails
+
+For the vCenter Server Appliance 6.5, 6.7, and 7.0
+
+Connect the vCenter Server Appliance with an SSH session and root credentials.
+Stop the performance charts service:
+/usr/lib/vmware-vmon/vmon-cli --stop perfcharts
+
+(Optional) Turn off the automatic startup of the service on reboot:
+/usr/lib/vmware-vmon/vmon-cli --update perfcharts --starttype MANUAL
+Temporarily disabling the performance charts service in vCenter Server 6.7 and 6.5 
