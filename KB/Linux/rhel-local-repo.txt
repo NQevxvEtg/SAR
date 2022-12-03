@@ -1,0 +1,6 @@
+# from the client server
+# add local.repo in /etc/yum.repos.d/
+
+subscription-manager import --certificate=<12345...>.pem
+rpm --import -vv /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-*
+
