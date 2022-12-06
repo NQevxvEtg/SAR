@@ -1,2 +1,3 @@
 https://www.kjctech.net/wsus-hitting-the-reset-button/
 https://xenappblog.com/2016/how-to-clean-up-wsus/
+https://www.stephenwagner.com/2019/05/16/howto-reinstall-wsus-from-scratch/
