@@ -9,3 +9,7 @@ cp CERTIFICATE.crt /usr/local/share/ca-certificates
 
 # update ca
 update-ca-certificates
+
+# read certificate
+openssl x509 -inform pem -noout -text -in 'cert.pem'
+openssl x509 -inform der -noout -text -in 'cert.crt'
