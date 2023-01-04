@@ -13,6 +13,8 @@ git fetch --unshallow
 git config --global user.email "public-email@example.com"
 git config --global user.name "Your Name"
 
+git config --global core.excludesfile '~/.gitignore'
+echo '**/*.ipynb_checkpoints/*' >> ~/.gitignore
 
 # ignore
 touch ~/.gitignore_global
