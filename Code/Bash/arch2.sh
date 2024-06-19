@@ -23,7 +23,7 @@ mkdir /mnt/etc
 genfstab -U -p /mnt >> /mnt/etc/fstab
 
 # initial install
-pacstrap /mnt base vim
+pacstrap /mnt base neovim
 
 # chroot
 cp nftable.sh /mnt/nftable.sh

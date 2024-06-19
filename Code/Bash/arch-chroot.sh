@@ -1,9 +1,7 @@
 #!/bin/bash
 
-pacman -S --noconfirm linux linux-headers linux-lts linux-lts-headers base-devel linux-firmware iwd networkmanager dhcpcd wpa_supplicant wireless_tools netctl dialog lvm2 intel-ucode nvidia nvidia-lts nftables net-tools terminator firefox git go keepassxc grub efibootmgr dosfstools os-prober mtools man rsync bash-completion atom adapta-gtk-theme materia-gtk-theme arc-gtk-theme arc-solid-gtk-theme gnome-themes-extra papirus-icon-theme noto-fonts noto-fonts-cjk noto-fonts-emoji
+pacman -S --noconfirm linux linux-headers linux-lts linux-lts-headers base-devel linux-firmware iwd networkmanager nm-connection-editor network-manager-applet dhcpcd wpa_supplicant wireless_tools netctl dialog lvm2 amd-ucode nvidia nvidia-lts nftables net-tools terminator firefox git go keepassxc grub efibootmgr dosfstools os-prober mtools man rsync bash-completion gnome-shell nautilus gnome-tweaks gnome-control-center
 
-pacman -S --noconfirm gnome
-pacman -S --noconfirm sudo
 
 # kernel
 sed -i "s/HOOKS=.*/HOOKS=(base udev autodetect modconf block encrypt lvm2 filesystems keyboard fsck)/g" /etc/mkinitcpio.conf
@@ -41,14 +39,19 @@ swapon -a
 
 # changeme
 timedatectl set-timezone Etc/UTC
-hostnamectl set-hostname hostname
 
 
 systemctl enable NetworkManager
 systemctl enable dhcpcd
 systemctl enable systemd-timesyncd
-systemctl enable gdm
 
-source nftable.sh
 
+# ~/.bash_profile
+#
+
+#if [[ -z $DISPLAY && $(tty) == /dev/tty1 && $XDG_SESSION_TYPE == tty ]]; then
+#  MOZ_ENABLE_WAYLAND=1 QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland exec dbus-run-session gnome-session
+#fi
+#
+#
 exit
