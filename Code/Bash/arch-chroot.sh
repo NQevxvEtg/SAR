@@ -1,10 +1,7 @@
 #!/bin/bash
 
-<<<<<<< HEAD
-pacman -S --noconfirm linux linux-headers linux-lts linux-lts-headers base-devel linux-firmware iwd networkmanager nm-connection-editor network-manager-applet dhcpcd wpa_supplicant wireless_tools netctl dialog lvm2 amd-ucode nvidia nvidia-lts nftables net-tools terminator firefox git go keepassxc grub efibootmgr dosfstools os-prober mtools man rsync bash-completion gnome-shell nautilus gnome-tweaks gnome-control-center
-=======
-pacman -S --noconfirm linux linux-headers linux-lts linux-lts-headers base-devel linux-firmware iwd networkmanager dhcpcd wpa_supplicant wireless_tools netctl dialog lvm2 intel-ucode nvidia nvidia-lts xorg-server xorg-apps xorg-xinit xf86-video-amdgpu mesa nftables net-tools terminator firefox git go keepassxc grub efibootmgr dosfstools os-prober mtools man rsync bash-completion zsh gnome-shell nautilus gnome-tweaks gnome-control-center
->>>>>>> 073a2b0 (New commit)
+
+pacman -S --noconfirm linux linux-headers linux-lts linux-lts-headers base-devel linux-firmware iwd networkmanager dhcpcd wpa_supplicant wireless_tools netctl dialog lvm2 amd-ucode nvidia nvidia-lts xorg-server xorg-apps xorg-xinit xf86-video-amdgpu mesa nftables net-tools terminator firefox git go keepassxc grub efibootmgr dosfstools os-prober mtools man rsync bash-completion zsh gnome-shell nautilus gnome-tweaks gnome-control-center
 
 
 # kernel
@@ -49,22 +46,8 @@ timedatectl set-timezone Etc/UTC
 systemctl enable NetworkManager
 systemctl enable dhcpcd
 systemctl enable systemd-timesyncd
-<<<<<<< HEAD
-=======
-
->>>>>>> 073a2b0 (New commit)
 
 
-<<<<<<< HEAD
-# ~/.bash_profile
-#
-
-#if [[ -z $DISPLAY && $(tty) == /dev/tty1 && $XDG_SESSION_TYPE == tty ]]; then
-#  MOZ_ENABLE_WAYLAND=1 QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland exec dbus-run-session gnome-session
-#fi
-#
-#
-=======
 # cp /etc/X11/xinit/xinitrc ~/.xinitrc 
 
 # nvim ~/.xinitrc 
@@ -86,6 +69,4 @@ systemctl enable systemd-timesyncd
 #fi
 
 
-
->>>>>>> 073a2b0 (New commit)
 exit
