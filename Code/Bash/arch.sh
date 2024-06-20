@@ -11,13 +11,13 @@ chmod +x *.sh
 # echo -ne "station wlan0 show\n" | iwctl
 
 # setup disk changeme
-echo -ne "g\nn\n\n\n+500M\nt\n1\nn\n\n\n+1G\nn\n\n\n\nt\n3\n30\nw\n" | fdisk /dev/sda
+echo -ne "g\nn\n\n\n+500M\nt\n1\nn\n\n\n+1G\nn\n\n\n\nt\n3\n30\nw\n" | fdisk /dev/nvme0n1
 
 # format disk
-mkfs.fat -F32 /dev/sda1
-mkfs.xfs -f /dev/sda2
+mkfs.fat -F32 /dev/nvme0n1p1
+mkfs.xfs -f /dev/nvme0n1p2
 
 # encrypt disk changeme
 devpass="password"
-echo $devpass | cryptsetup -q luksFormat /dev/sda3
-echo $devpass | cryptsetup open --type luks /dev/sda3 lvm
+echo $devpass | cryptsetup -q luksFormat /dev/nvme0n1p3
+echo $devpass | cryptsetup open --type luks /dev/nvme0n1p3 lvm

@@ -18,7 +18,8 @@ mkfs.xfs /dev/vg0/lv0
 # mount
 mount /dev/vg0/lv0 /mnt
 mkdir /mnt/boot
-mount /dev/sda2 /mnt/boot
+# change me!!!
+mount /dev/nvme0n1p2 /mnt/boot
 mkdir /mnt/etc
 genfstab -U -p /mnt >> /mnt/etc/fstab
 
