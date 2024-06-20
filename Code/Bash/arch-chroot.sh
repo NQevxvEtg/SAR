@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-pacman -S --noconfirm linux linux-headers linux-lts linux-lts-headers base-devel linux-firmware iwd networkmanager dhcpcd wpa_supplicant wireless_tools netctl dialog lvm2 amd-ucode nvidia nvidia-lts xorg-server xorg-apps xorg-xinit xf86-video-amdgpu mesa nftables net-tools terminator firefox git go keepassxc grub efibootmgr dosfstools os-prober mtools man rsync bash-completion zsh gnome-shell nautilus gnome-tweaks gnome-control-center libgnome-keyring reflector
+pacman -S --noconfirm linux linux-headers linux-lts linux-lts-headers base-devel linux-firmware iwd networkmanager dhcpcd wpa_supplicant wireless_tools netctl dialog lvm2 amd-ucode nvidia nvidia-lts nvidia-utils xorg-server xorg-apps xorg-xinit xf86-video-amdgpu mesa nftables net-tools terminator firefox git go keepassxc grub efibootmgr dosfstools os-prober mtools man rsync bash-completion zsh dnsutils gnome reflector
 
 
 # kernel
