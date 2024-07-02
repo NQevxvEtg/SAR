@@ -15,7 +15,7 @@ echo -ne "g\nn\n\n\n+500M\nt\n1\nn\n\n\n+1G\nn\n\n\n\nt\n3\n30\nw\n" | fdisk /de
 
 # format disk
 mkfs.fat -F32 /dev/nvme0n1p1
-mkfs.xfs -f /dev/nvme0n1p2
+mkfs.btrfs -f /dev/nvme0n1p2
 
 # encrypt disk changeme
 devpass="password"
