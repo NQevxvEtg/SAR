@@ -1,0 +1,5 @@
+# locate the downloaded pem file during the instance creation 
+
+chmod 0400 name.pem
+
+ssh -i name.pem ec2-user@<ip>
