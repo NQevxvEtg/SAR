@@ -1,0 +1,42 @@
+https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html#getting-started-install-instructions
+
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+vim awscliv2.gpg
+gpg --import awscliv2.gpg
+curl -o awscliv2.sig https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip.sig
+gpg --verify awscliv2.sig awscliv2.zip
+unzip awscliv2.zip
+sudo ./aws/install
+
+
+/usr/local/bin/aws --version
+
+# update
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+
+
+
+# now setup credentials
+
+Security credentials>Access keys
+
+
+mkdir -p $HOME/.aws/ && touch $HOME/.aws/config
+mkdir -p $HOME/.aws/ && touch $HOME/.aws/credentials
+
+cat <<EOF > $HOME/.aws/config
+[default]
+region = us-east-2
+output = json
+EOF
+
+cat <<EOF > $HOME/.aws/credentials
+[default]
+aws_access_key_id=<>
+aws_secret_access_key=<>
+EOF
+
+aws iam list-users
+
