@@ -10,6 +10,8 @@ chage -E "2022-02-02" username
 # find image
 find . -name '*' -exec file {} \; | grep -o -P '^.+: \w+ image'
 
+# find unique file extentions 
+find . -type f -name '*.*' | awk -F. '{if (NF>1) print $NF}' | sort | uniq
 
 # fast delete
 mkdir empty_dir
