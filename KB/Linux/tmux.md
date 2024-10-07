@@ -1,5 +1,3 @@
-It seems there might be some confusion between Tmux "windows" and "panes." Here's a clarification:
-
 ### Tmux Terminology
 
 1. **Windows:**
