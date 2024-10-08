@@ -107,4 +107,3 @@ If you have a window numbered `2` that you want to close, you would:
 - **Switch to a Window:**
   To switch to a specific window before closing it, press `Ctrl+b` followed by the window number (e.g., `0`, `1`, `2`, etc.).
 
-By using these methods, you can effectively close windows in Tmux and manage your terminal sessions more efficiently.
