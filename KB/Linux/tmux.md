@@ -107,3 +107,23 @@ If you have a window numbered `2` that you want to close, you would:
 - **Switch to a Window:**
   To switch to a specific window before closing it, press `Ctrl+b` followed by the window number (e.g., `0`, `1`, `2`, etc.).
 
+
+
+To reattach to a `tmux` window by its number, you can follow these steps:
+
+1. If you're already attached to the session:
+   ```bash
+   tmux select-window -t <window-number>
+   ```
+
+2. If you're not attached yet:
+   ```bash
+   tmux attach-session -t <session-name> \; select-window -t <window-number>
+   ```
+
+3. Alternatively, reattach directly to a session and window by number:
+   ```bash
+   tmux attach-session -t <session-name>:<window-number>
+   ```
+
+Use `tmux list-sessions` and `tmux list-windows` to find session and window numbers if needed.
