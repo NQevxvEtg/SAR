@@ -8,9 +8,6 @@
    - A "pane" is a subdivision within a window. You can split a window into multiple panes either horizontally or vertically.
    - You create a new pane by pressing `Ctrl+b` followed by `%` (for a vertical split) or `Ctrl+b` followed by `"` (for a horizontal split).
 
-### Your Situation
-
-When you used `Ctrl+b` followed by `%` or `"`, you were creating new panes within the existing windows, not new windows. This is why `tmux ls` still shows only 2 windows.
 
 ### Verifying Panes
 
