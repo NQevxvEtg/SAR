@@ -54,3 +54,7 @@ netstat -tn 2>/dev/null | grep :80 | awk '{print $5}' | cut -d: -f1 | sort | uni
 # user different algo
 sshpass -p password ssh -oKexAlgorithms=+algo_name username@domain
 
+# flush dns
+nmcli general reload dns-full
+
+
