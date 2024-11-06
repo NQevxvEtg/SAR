@@ -75,99 +75,99 @@ To install and configure Red Hat Satellite 6.12
 
 **1. Sync Repositories**
 
-Synchronizing repositories ensures that your Satellite server has the latest content for deployment and updates.
+Synchronizing repositories ensures that your Satellite server has the latest content for deployment and updates.
 
 - **Access the Satellite Web UI:**
-  - Navigate to `https://<satellite_server_fqdn>/` in your web browser.
-  - Log in with your administrative credentials.
+  - Navigate to `https://<satellite_server_fqdn>/` in your web browser.
+  - Log in with your administrative credentials.
 
 - **Enable Red Hat Repositories:**
-  - Go to **Content** > **Red Hat Repositories**.
-  - Select the repositories relevant to your environment (e.g., RHEL 8 for x86_64 BaseOS, AppStream).
-  - Click **Enable** for each chosen repository.
+  - Go to **Content** > **Red Hat Repositories**.
+  - Select the repositories relevant to your environment (e.g., RHEL 8 for x86_64 BaseOS, AppStream).
+  - Click **Enable** for each chosen repository.
 
 - **Create a Sync Plan:**
-  - Navigate to **Content** > **Sync Plans**.
-  - Click **Create Sync Plan**.
-  - Provide a **Name**, **Interval** (e.g., daily, weekly), and **Start Date/Time**.
-  - Click **Save**.
+  - Navigate to **Content** > **Sync Plans**.
+  - Click **Create Sync Plan**.
+  - Provide a **Name**, **Interval** (e.g., daily, weekly), and **Start Date/Time**.
+  - Click **Save**.
 
 - **Associate Repositories with the Sync Plan:**
-  - Go to **Content** > **Red Hat Repositories**.
-  - Select the desired repositories.
-  - Click **Select Action** > **Manage Sync Plans**.
-  - Choose the previously created sync plan and click **Update**.
+  - Go to **Content** > **Red Hat Repositories**.
+  - Select the desired repositories.
+  - Click **Select Action** > **Manage Sync Plans**.
+  - Choose the previously created sync plan and click **Update**.
 
 - **Manually Sync Repositories (if needed):**
-  - Navigate to **Content** > **Sync Status**.
-  - Click **Select All** and then **Sync Now** to initiate synchronization.
+  - Navigate to **Content** > **Sync Status**.
+  - Click **Select All** and then **Sync Now** to initiate synchronization.
 
 **2. Add Host Groups and Provisioning Templates**
 
-Host Groups and Provisioning Templates streamline the deployment of RHEL systems by standardizing configurations.
+Host Groups and Provisioning Templates streamline the deployment of RHEL systems by standardizing configurations.
 
 - **Create a Host Group:**
-  - In the Satellite Web UI, go to **Configure** > **Host Groups**.
-  - Click **Create Host Group**.
-  - Fill in the following fields:
-    - **Name:** Descriptive name for the host group.
-    - **Lifecycle Environment:** Select the appropriate environment (e.g., Library, Development).
-    - **Content View:** Choose the relevant content view.
-    - **Content Source:** Select the Satellite or Capsule server.
-    - **Puppet Environment:** If using Puppet, select the environment.
-    - **Puppet Classes:** Assign any necessary Puppet classes.
-  - Click **Save**.
+  - In the Satellite Web UI, go to **Configure** > **Host Groups**.
+  - Click **Create Host Group**.
+  - Fill in the following fields:
+    - **Name:** Descriptive name for the host group.
+    - **Lifecycle Environment:** Select the appropriate environment (e.g., Library, Development).
+    - **Content View:** Choose the relevant content view.
+    - **Content Source:** Select the Satellite or Capsule server.
+    - **Puppet Environment:** If using Puppet, select the environment.
+    - **Puppet Classes:** Assign any necessary Puppet classes.
+  - Click **Save**.
 
 - **Define Provisioning Templates:**
-  - Navigate to **Hosts** > **Provisioning Templates**.
-  - Click **Create Template**.
-  - Provide a **Name** and select the **Type** (e.g., Kickstart, Preseed).
-  - Enter the template content, utilizing ERB syntax for dynamic content.
-  - Click **Save**.
+  - Navigate to **Hosts** > **Provisioning Templates**.
+  - Click **Create Template**.
+  - Provide a **Name** and select the **Type** (e.g., Kickstart, Preseed).
+  - Enter the template content, utilizing ERB syntax for dynamic content.
+  - Click **Save**.
 
 - **Associate Templates with Operating Systems:**
-  - Go to **Hosts** > **Operating Systems**.
-  - Select the desired operating system.
-  - Click the **Templates** tab.
-  - Assign the appropriate provisioning templates (e.g., Kickstart, Finish).
-  - Click **Save**.
+  - Go to **Hosts** > **Operating Systems**.
+  - Select the desired operating system.
+  - Click the **Templates** tab.
+  - Assign the appropriate provisioning templates (e.g., Kickstart, Finish).
+  - Click **Save**.
 
 **3. Enable Capsule Servers (Optional)**
 
-Capsule Servers enhance scalability by distributing content and services across different locations.
+Capsule Servers enhance scalability by distributing content and services across different locations.
 
 - **Install Capsule Server:**
-  - On the designated Capsule server, register the system:
-    ```bash
+  - On the designated Capsule server, register the system:
+    ```bash
     sudo subscription-manager register --org="<organization>" --activationkey="<activation_key>"
-    ```
-  - Enable necessary repositories:
-    ```bash
+    ```
+  - Enable necessary repositories:
+    ```bash
     sudo subscription-manager repos \
       --enable=rhel-8-for-x86_64-baseos-rpms \
       --enable=rhel-8-for-x86_64-appstream-rpms \
       --enable=satellite-capsule-6.15-for-rhel-8-x86_64-rpms
-    ```
-  - Install the Capsule software:
-    ```bash
+    ```
+  - Install the Capsule software:
+    ```bash
     sudo dnf install satellite-capsule
-    ```
+    ```
 
 - **Generate and Transfer Certificates:**
-  - On the Satellite server, generate certificates:
-    ```bash
+  - On the Satellite server, generate certificates:
+    ```bash
     sudo capsule-certs-generate \
       --foreman-proxy-fqdn "<capsule_fqdn>" \
       --certs-tar "/root/<capsule_fqdn>-certs.tar"
-    ```
-  - Transfer the tar file to the Capsule server:
-    ```bash
+    ```
+  - Transfer the tar file to the Capsule server:
+    ```bash
     scp /root/<capsule_fqdn>-certs.tar root@<capsule_fqdn>:/root/
-    ```
+    ```
 
 - **Configure the Capsule Server:**
-  - On the Capsule server, run the installer:
-    ```bash
+  - On the Capsule server, run the installer:
+    ```bash
     sudo satellite-installer --scenario capsule \
       --foreman-proxy-content-parent-fqdn "<satellite_fqdn>" \
       --foreman-proxy-register-in-foreman "true" \
@@ -177,12 +177,13 @@ To install and configure Red Hat Satellite 6.12
       --foreman-proxy-oauth-consumer-key "<oauth_key>" \
       --foreman-proxy-oauth-consumer-secret "<oauth_secret>" \
       --certs-tar-file "/root/<capsule_fqdn>-certs.tar"
-    ```
+    ```
 
 - **Verify Capsule Registration:**
-  - On the Satellite server, confirm the Capsule is registered:
-    ```bash
+  - On the Satellite server, confirm the Capsule is registered:
+    ```bash
     hammer proxy list
-    ```
-  - Ensure the Capsule appears in the list and is active.
+    ```
+  - Ensure the Capsule appears in the list and is active.
+
 
