@@ -1,3 +1,7 @@
+# ls -p: Lists files and directories, appending a / to directories.
+# grep -v '\.jl$': Filters out lines ending with .jl, effectively excluding files with that extension.
+ls -p | grep -v '\.jl$'
+
 # /etc/firewalld/zones
 firewall-cmd --permanent --remove-service=dhcpv6-client &&  firewall-cmd --reload && firewall-cmd --list-all
 
