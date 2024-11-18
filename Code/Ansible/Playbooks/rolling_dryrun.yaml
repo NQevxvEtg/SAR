@@ -1,0 +1,33 @@
+---
+# Dry-run playbook to validate reboot process for Linux VMs
+
+- name: Validate Reboot Process in Batches of 50 (Dry Run)
+  hosts: linux_vms             # Target all Linux VMs in the inventory group 'linux_vms'
+  become: yes                  # Gain elevated privileges (sudo) for simulation
+  serial: 50                   # Process the VMs in batches of 50 at a time
+  tasks:
+    - name: Simulate reboot initiation
+      # Instead of rebooting, simulate the command by echoing a message
+      ansible.builtin.shell: |
+        echo "Reboot command would be executed here for {{ inventory_hostname }}"
+      register: simulated_reboot # Store the simulation result in a variable
+
+    - name: Display simulated reboot message
+      # Debug task to print what would happen in a real playbook
+      ansible.builtin.debug:
+        msg: "Reboot simulated for {{ inventory_hostname }}: {{ simulated_reboot.stdout }}"
+
+- name: Validate Post-Reboot Connectivity in Batches of 50 (Dry Run)
+  hosts: linux_vms             # Target the same group of Linux VMs
+  become: no                   # No need for elevated privileges for this validation
+  serial: 50                   # Ensure only the current batch of 50 VMs is processed
+  tasks:
+    - name: Simulate waiting for SSH to become available
+      # Simulate the wait-for-connection step without actual waiting
+      ansible.builtin.debug:
+        msg: "Would wait for {{ inventory_hostname }} to come back online after reboot"
+
+    - name: Simulate uptime confirmation
+      # Simulate the uptime validation step
+      ansible.builtin.debug:
+        msg: "Would check uptime for {{ inventory_hostname }} after reboot"
