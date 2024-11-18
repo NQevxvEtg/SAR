@@ -1,0 +1,34 @@
+---
+# Dry-run playbook to simulate long script execution on Linux VMs asynchronously in batches of 50
+
+- name: Simulate Long Script Execution Asynchronously in Batches of 50
+  hosts: linux_vms             # Target all Linux VMs in the inventory
+  become: yes                  # Gain elevated privileges if required
+  serial: 50                   # Process the VMs in batches of 50
+  tasks:
+    - name: Simulate running the long script asynchronously
+      # Simulate the execution of a long-running script with asynchronous handling
+      ansible.builtin.shell: |
+        echo "Simulating long script execution on {{ inventory_hostname }}"
+      async: 300               # Allow up to 5 minutes for the task to run
+      poll: 0                  # Do not wait for task completion
+      register: async_job      # Store async job details
+
+    - name: Display async job details
+      # Debug task to print details of the asynchronous job for each VM
+      ansible.builtin.debug:
+        var: async_job
+
+    - name: Wait for completion of all async jobs in the batch
+      # Wait for the asynchronous jobs to complete for the current batch
+      ansible.builtin.async_status:
+        jid: "{{ async_job.ansible_job_id }}" # Use job ID to track completion
+      register: async_result
+      until: async_result.finished            # Wait until the task is finished
+      retries: 30                             # Retry up to 30 times
+      delay: 10                               # Wait 10 seconds between retries
+
+    - name: Simulate success message
+      # Print a success message after the simulated script execution completes
+      ansible.builtin.debug:
+        msg: "Dry run completed for {{ inventory_hostname }}"
