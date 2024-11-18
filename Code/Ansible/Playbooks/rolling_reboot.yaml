@@ -1,0 +1,47 @@
+---
+# Playbook to reboot Linux VMs in batches of 50 using Ansible
+
+- name: Reboot Linux VMs in batches of 50
+  hosts: linux_vms             # Target all Linux VMs in the inventory group 'linux_vms'
+  become: yes                  # Gain elevated privileges (sudo) to execute reboot commands
+  serial: 50                   # Process the VMs in batches of 50 at a time
+  tasks:
+    - name: Initiate reboot (asynchronous)
+      # Use the shell module to trigger a reboot on each VM asynchronously
+      # 'async: 300' means the task is allowed to run for 5 minutes
+      # 'poll: 0' ensures that Ansible doesn't wait for the task to complete
+      ansible.builtin.shell: |
+        sleep 2 && reboot      # Add a small delay before executing reboot for robustness
+      async: 300               # Maximum time allowed for the task to run
+      poll: 0                  # Do not wait for task completion, move to the next host
+      register: reboot_job     # Store the task result in the variable 'reboot_job'
+
+    - name: Print async job details
+      # Debug task to display the details of the asynchronous reboot job
+      # This is useful for troubleshooting or logging
+      ansible.builtin.debug:
+        var: reboot_job        # Print the contents of the 'reboot_job' variable
+
+- name: Wait for batch to come online
+  hosts: linux_vms             # Target the same group of Linux VMs
+  become: no                   # No need for elevated privileges to check connectivity
+  serial: 50                   # Ensure that only the current batch of 50 VMs is processed
+  tasks:
+    - name: Wait for SSH to become available
+      # Wait until the SSH service is available on each VM
+      # This task ensures the VM has rebooted and is ready for further operations
+      ansible.builtin.wait_for_connection:
+        timeout: 600           # Wait up to 10 minutes for the VM to come back online
+        delay: 10              # Retry every 10 seconds if the connection fails initially
+
+    - name: Confirm uptime after reboot
+      # Run the 'uptime' command to confirm the VM is up and running
+      # This is a simple check to ensure the VM rebooted successfully
+      ansible.builtin.command: uptime
+      register: uptime_result  # Store the output of the uptime command in 'uptime_result'
+
+    - name: Print uptime
+      # Debug task to display the output of the uptime command
+      # This provides confirmation and logs that the VM has restarted successfully
+      ansible.builtin.debug:
+        var: uptime_result.stdout  # Print the 'stdout' (standard output) of the 'uptime' command
