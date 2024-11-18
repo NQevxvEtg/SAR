@@ -1,0 +1,39 @@
+---
+# Playbook to execute a long script asynchronously on Linux VMs in batches of 50
+
+- name: Execute Long Script Asynchronously in Batches of 50
+  hosts: linux_vms             # Target all Linux VMs in the inventory
+  become: yes                  # Gain elevated privileges if required
+  serial: 50                   # Process the VMs in batches of 50
+  tasks:
+    - name: Run the long script asynchronously
+      # Execute the long-running script on each VM asynchronously
+      ansible.builtin.shell: |
+        /path/to/your/long_script.sh
+      async: 900               # Allow up to 15 minutes for the task to run
+      poll: 0                  # Do not wait for task completion
+      register: async_job      # Store async job details
+
+    - name: Display async job details
+      # Debug task to print details of the asynchronous job for each VM
+      ansible.builtin.debug:
+        var: async_job
+
+    - name: Wait for completion of all async jobs in the batch
+      # Wait for the asynchronous jobs to complete for the current batch
+      ansible.builtin.async_status:
+        jid: "{{ async_job.ansible_job_id }}" # Use job ID to track completion
+      register: async_result
+      until: async_result.finished            # Wait until the task is finished
+      retries: 45                             # Retry up to 45 times
+      delay: 20                               # Wait 20 seconds between retries
+
+    - name: Display script execution result
+      # Print the result of the long-running script execution for each VM
+      ansible.builtin.debug:
+        msg: "Script executed on {{ inventory_hostname }}: {{ async_result.stdout }}"
+
+    - name: Confirm success message
+      # Display a success message after script execution completes
+      ansible.builtin.debug:
+        msg: "Script completed successfully on {{ inventory_hostname }}"
