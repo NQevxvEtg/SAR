@@ -1,2 +1,4 @@
 # yank from current line all the way down
 :.,$y
+# yank from current line all the way up
+:1,.y
