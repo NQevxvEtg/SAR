@@ -1,0 +1,112 @@
+- name: Identify Reachable Hosts and Gather Hostnames
+  hosts: all
+  become: true
+  gather_facts: false
+  strategy: linear # Processes hosts one by one, safer for initial checks.
+  vars:
+    ansible_remote_tmp: /tmp/ansible_tmp # Custom tmp directory, ensure it exists and is writable/executable by the remote user.
+  tasks:
+    - block:
+        - name: Check connectivity and basic host information
+          ansible.builtin.wait_for_connection:
+            timeout: 10 # Increased slightly for potentially slower initial connections.
+
+        - name: Gather minimal facts to get hostname
+          ansible.builtin.setup:
+            filter:
+              - ansible_hostname
+
+        - name: Add host to a specific dynamic group using its hostname
+          ansible.builtin.group_by:
+            key: "reachable_{{ ansible_hostname | lower }}"
+
+        - name: Add host to the general 'reachable' group
+          ansible.builtin.group_by:
+            key: "reachable"
+
+      rescue:
+        - name: Mark host as unreachable and debug
+          ansible.builtin.group_by:
+            key: "unreachable_hosts"
+          # This task will only run for the host that failed in the block
+
+        - name: Debug print for unreachable host
+          ansible.builtin.debug:
+            msg: "ERROR: Cannot connect to or gather facts from {{ inventory_hostname }}. Added to 'unreachable_hosts' group."
+
+---
+- name: Apply STIG Fixes on Reachable Hosts
+  hosts: reachable # Target hosts that were successfully processed in the previous play
+  become: true
+  gather_facts: false # Facts already gathered or not strictly needed for these tasks
+  vars:
+    ansible_remote_tmp: /tmp/ansible_tmp
+    script_dir: "{{ playbook_dir }}/../scripts" # Assumes scripts are in a 'scripts' directory one level above the playbook directory
+    # Define realistic maximum runtime for your STIG script
+    # Example: 24 hours (24 * 60 * 60 = 86400 seconds)
+    max_runtime_seconds: 86400
+    # Define how often to poll for async job completion
+    poll_interval_seconds: 60
+    # Calculate retries based on max_runtime and poll_interval
+    # num_retries = max_runtime_seconds / poll_interval_seconds
+    # Example for 24 hours with 60s poll: 86400 / 60 = 1440
+    num_retries: "{{ (max_runtime_seconds | int / poll_interval_seconds | int) | round(method='ceil') | int }}"
+
+  tasks:
+    - name: Copy the STIG fixes utility script (stig_fixes.sh)
+      ansible.builtin.copy:
+        src: "{{ script_dir }}/stig_fixes.sh"
+        dest: "{{ ansible_remote_tmp }}/stig_fixes.sh" # Using remote_tmp for script placement
+        mode: '0755'
+
+    - name: Copy the main STIG fixes script (rstig_fixes.sh)
+      ansible.builtin.copy:
+        src: "{{ script_dir }}/rstig_fixes.sh"
+        dest: "{{ ansible_remote_tmp }}/rstig_fixes.sh" # Using remote_tmp
+        mode: '0755'
+
+    - name: Execute the STIG fixes script (rstig_fixes.sh) asynchronously
+      ansible.builtin.shell: "{{ ansible_remote_tmp }}/rstig_fixes.sh"
+      args:
+        chdir: "{{ ansible_remote_tmp }}" # Execute from the directory where scripts are copied
+        executable: /bin/bash # Explicitly define executable if needed, often default is fine
+      async: "{{ max_runtime_seconds }}"
+      poll: 0 # Do not wait for completion here, continue immediately
+      register: async_stig_job
+      environment:
+        HOME: "{{ ansible_remote_tmp }}" # Sets HOME for the script's execution environment
+
+    - name: Wait for the asynchronous STIG fixes job to complete
+      ansible.builtin.async_status:
+        jid: "{{ async_stig_job.ansible_job_id }}"
+      register: job_result
+      until: job_result.finished
+      retries: "{{ num_retries }}"
+      delay: "{{ poll_interval_seconds }}"
+      # The 'environment' var is generally not needed for async_status itself
+
+    - name: Check STIG script execution result
+      ansible.builtin.fail:
+        msg: "STIG script rstig_fixes.sh failed with return code {{ job_result.rc }}. Stdout: {{ job_result.stdout | default('') }}. Stderr: {{ job_result.stderr | default('') }}"
+      when: job_result.rc is defined and job_result.rc != 0
+
+    - name: Display the STIG script run output
+      ansible.builtin.debug:
+        msg: |
+          STIG Script (rstig_fixes.sh) completed.
+          Return Code: {{ job_result.rc | default('N/A') }}
+          STDOUT:
+          {{ job_result.stdout | default('No stdout') }}
+          STDERR:
+          {{ job_result.stderr | default('No stderr') }}
+      when: job_result is defined
+
+    - name: Clean up script (stig_fixes.sh)
+      ansible.builtin.file:
+        path: "{{ ansible_remote_tmp }}/stig_fixes.sh"
+        state: absent
+
+    - name: Clean up script (rstig_fixes.sh)
+      ansible.builtin.file:
+        path: "{{ ansible_remote_tmp }}/rstig_fixes.sh"
+        state: absent
