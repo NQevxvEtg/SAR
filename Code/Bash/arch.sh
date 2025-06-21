@@ -30,68 +30,81 @@ LUKS_PARTITION="/dev/nvme0n1p6"         # The new partition for the Arch LUKS co
 cleanup_previous_install() {
     echo "--- Initiating Cleanup of Previous Installation Attempts ---"
 
-    # 1. Turn off any active swap on the target partitions or within the LVM
+    # 1. Kill any processes that might be using the mount point or LVM devices
+    echo "Identifying and killing processes using /mnt or LVM devices..."
+    fuser -mk /mnt/* /mnt/.?* /mnt 2>/dev/null || true # Kill processes using /mnt
+    fuser -mk /dev/mapper/vg0-lv0 2>/dev/null || true # Kill processes using the LV
+    fuser -mk /dev/mapper/lvm 2>/dev/null || true     # Kill processes using the LUKS device
+    fuser -mk "$LUKS_PARTITION" 2>/dev/null || true   # Kill processes using the LUKS partition
+    fuser -mk "$ARCH_BOOT_PARTITION" 2>/dev/null || true # Kill processes using boot partition
+
+    # Give processes a moment to terminate
+    sleep 2
+
+    # 2. Turn off any active swap on the target partitions or within the LVM
     echo "Checking for and turning off active swap..."
-    # Check for swap on the LUKS partition itself
-    if swapon -s | grep "$LUKS_PARTITION" >/dev/null; then
-        echo "Swap found on $LUKS_PARTITION. Turning off..."
-        sudo swapoff "$LUKS_PARTITION" || echo "Failed to turn off swap on $LUKS_PARTITION."
-    fi
-    # Check for swap on any LVM logical volume (e.g., /dev/vg0/lv0)
-    if swapon -s | grep "/dev/mapper/vg0-lv0" >/dev/null; then
-        echo "Swap found on /dev/mapper/vg0-lv0. Turning off..."
-        sudo swapoff /dev/mapper/vg0-lv0 || echo "Failed to turn off swap on /dev/mapper/vg0-lv0."
-    fi
-    # Check for swap on the /boot partition
-    if swapon -s | grep "$ARCH_BOOT_PARTITION" >/dev/null; then
-        echo "Swap found on $ARCH_BOOT_PARTITION. Turning off..."
-        sudo swapoff "$ARCH_BOOT_PARTITION" || echo "Failed to turn off swap on $ARCH_BOOT_PARTITION."
-    fi
-    # Also check if any swapfile might be active if it was created.
-    if swapon -s | grep "/swapfile" >/dev/null; then
-        echo "Swapfile found. Turning off..."
-        sudo swapoff /swapfile || echo "Failed to turn off swapfile."
-    fi
+    # Iterate through all swap devices and try to turn them off if they relate to our target partitions
+    for SWAP_DEV in $(swapon -s | awk '{print $1}'); do
+        if [[ "$SWAP_DEV" == "$LUKS_PARTITION" ]] || \
+           [[ "$SWAP_DEV" == "/dev/mapper/vg0-lv0" ]] || \
+           [[ "$SWAP_DEV" == "$ARCH_BOOT_PARTITION" ]] || \
+           [[ "$SWAP_DEV" == "/swapfile" ]] || \
+           [[ "$SWAP_DEV" =~ ^/dev/mapper/lvm_ ]]; then # Check for any LVM-related swap devices
+            echo "Swap found on $SWAP_DEV. Turning off..."
+            sudo swapoff "$SWAP_DEV" || echo "Failed to turn off swap on $SWAP_DEV."
+        fi
+    done
 
-
-    # 2. Unmount any filesystems mounted under /mnt
-    echo "Attempting to unmount all mounts under /mnt..."
-    # Use umount -l (lazy unmount) as a fallback if -R fails due to device busy
-    sudo umount -R -l /mnt >/dev/null 2>&1
-    # Check again and try individual unmounts if -R failed
+    # 3. Unmount any filesystems mounted under /mnt (forcefully if necessary)
+    echo "Attempting to unmount all mounts under /mnt (forcefully)..."
+    # Try lazy unmount first, then forceful unmount if lazy fails.
+    sudo umount -R -l /mnt >/dev/null 2>&1 # Lazy unmount
+    sudo umount -R -f /mnt >/dev/null 2>&1 # Forceful unmount as a last resort
+    
+    # Verify and try individual unmounts again for robustness
     if mountpoint -q /mnt/boot/EFI; then
         echo "Unmounting /mnt/boot/EFI..."
-        sudo umount -l /mnt/boot/EFI || echo "Failed to unmount /mnt/boot/EFI. Continuing..."
+        sudo umount -l /mnt/boot/EFI || sudo umount -f /mnt/boot/EFI || echo "Failed to unmount /mnt/boot/EFI. Continuing..."
     fi
     if mountpoint -q /mnt/boot; then
         echo "Unmounting /mnt/boot..."
-        sudo umount -l /mnt/boot || echo "Failed to unmount /mnt/boot. Continuing..."
+        sudo umount -l /mnt/boot || sudo umount -f /mnt/boot || echo "Failed to unmount /mnt/boot. Continuing..."
     fi
     if mountpoint -q /mnt; then
         echo "Unmounting /mnt..."
-        sudo umount -l /mnt || echo "Failed to unmount /mnt. Continuing..."
+        sudo umount -l /mnt || sudo umount -f /mnt || echo "Failed to unmount /mnt. Continuing..."
     fi
+    
     # Ensure /mnt is truly empty and ready
     sudo rm -rf /mnt/* /mnt/.* >/dev/null 2>&1 # Clear any leftover files, ignore errors
 
-
-    # 3. Deactivate LVM logical volumes and remove volume groups
+    # 4. Deactivate and remove LVM structures
     echo "Checking for and deactivating LVM structures..."
-    # Check if vg0 exists and try to deactivate it
+    # Deactivate all logical volumes in vg0
     if vgdisplay vg0 >/dev/null 2>&1; then
-        echo "Volume Group 'vg0' found. Deactivating..."
-        # First deactivate all logical volumes in vg0
-        sudo vgchange -an vg0 || echo "Failed to deactivate LVs in vg0. Continuing..."
-        # Then remove the volume group (this might fail if LVs are still active)
-        sudo vgremove -f vg0 || echo "Failed to remove Volume Group 'vg0'. Continuing..."
+        echo "Volume Group 'vg0' found. Deactivating all logical volumes..."
+        sudo lvchange -an /dev/vg0/* || echo "Failed to deactivate LVs in vg0. Continuing..."
     fi
-    # Ensure no lingering LVM device mappings
-    sudo dmsetup remove_all >/dev/null 2>&1 || true # Remove all device mapper devices
 
-    # 4. Close LUKS container
+    # Explicitly remove logical volume device mapper entries
+    if [ -e "/dev/mapper/vg0-lv0" ]; then
+        echo "Removing device mapper entry for vg0-lv0..."
+        sudo dmsetup remove /dev/mapper/vg0-lv0 || echo "Failed to remove dm vg0-lv0. Continuing..."
+    fi
+
+    # Then try to remove the volume group
+    if vgdisplay vg0 >/dev/null 2>&1; then
+        echo "Removing Volume Group 'vg0'..."
+        sudo vgremove -ff vg0 || echo "Failed to remove Volume Group 'vg0'. Continuing..."
+    fi
+
+    # Ensure no lingering device mapper entries in general
+    echo "Attempting to remove all remaining device mapper entries..."
+    sudo dmsetup remove_all >/dev/null 2>&1 || true
+
+    # 5. Close LUKS container
     echo "Checking for and closing LUKS containers..."
-    # Use a dummy name if `lvm` isn't yet opened, just to satisfy syntax.
-    local LUKS_CRYPT_MAPPER_NAME="lvm"
+    local LUKS_CRYPT_MAPPER_NAME="lvm" # This is the name given by cryptsetup open "$LUKS_PARTITION" lvm
     if cryptsetup status "$LUKS_CRYPT_MAPPER_NAME" >/dev/null 2>&1; then
         echo "LUKS container '$LUKS_CRYPT_MAPPER_NAME' found. Closing..."
         # No password needed for closing.
