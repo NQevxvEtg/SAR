@@ -166,7 +166,8 @@ genfstab -U -p /mnt >> /mnt/etc/fstab
 
 # Initial pacstrap
 echo "Running pacstrap..."
-pacstrap /mnt base vim xfsprogs # xfsprogs for XFS support inside chroot
+# ADDED linux-firmware to pacstrap for mkinitcpio requirements
+pacstrap /mnt base vim xfsprogs linux-firmware
 
 # Copy nftables script and the generated chroot script to the target system
 echo "Copying scripts and files to /mnt..."
