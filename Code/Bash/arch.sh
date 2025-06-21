@@ -5,17 +5,10 @@
 # It also generates and executes the second part of the installation script
 # within the chroot environment.
 
-# WARNING: This script contains hardcoded passwords.
-# For production environments, consider more secure methods for password handling.
-
-# --- Configuration Variables (CHANGE ME) ---
-DEV_PASS="your_disk_encryption_password" # CHANGE ME: Your disk encryption password
-ROOT_PASS="your_root_password"           # CHANGE ME: Your root password
-USER_NAME="your_username"                # CHANGE ME: Your desired username
-USER_PASS="your_user_password"           # CHANGE ME: Your user password
-WIFI_SSID="Your_WiFi_SSID"               # CHANGE ME: Your Wi-Fi SSID
-WIFI_PASSWORD="Your_WiFi_Password"       # CHANGE ME: Your Wi-Fi password
-TIME_ZONE="Etc/UTC"                      # CHANGE ME: Your desired timezone (e.g., "America/New_York")
+# --- Configuration Variables (All prompts now) ---
+# These variables are intentionally left empty to ensure the script always prompts for values.
+# Only TIME_ZONE remains as a configurable variable in the script.
+TIME_ZONE="Etc/UTC" # CHANGE ME: Your desired timezone (e.g., "America/New_York")
 
 
 # --- IMPORTANT: PARTITION VARIABLES (SET BASED ON YOUR lsblk OUTPUT AFTER MANUAL PARTITIONING) ---
@@ -89,14 +82,12 @@ cleanup_previous_install() {
 
     # 4. Close LUKS container
     echo "Checking for and closing LUKS containers..."
-    if cryptsetup status lvm >/dev/null 2>&1; then
-        echo "LUKS container 'lvm' found. Closing..."
-        echo "$DEV_PASS" | sudo cryptsetup close lvm || echo "Failed to close LUKS container 'lvm'. Continuing..."
-    fi
-    # Also attempt to close by device path if it was opened with a different name
-    if cryptsetup status "$LUKS_PARTITION_CRYPT_NAME" >/dev/null 2>&1; then
-        echo "LUKS container '$LUKS_PARTITION_CRYPT_NAME' found. Closing..."
-        echo "$DEV_PASS" | sudo cryptsetup close "$LUKS_PARTITION_CRYPT_NAME" || echo "Failed to close LUKS container '$LUKS_PARTITION_CRYPT_NAME'. Continuing..."
+    # Use a dummy name if `lvm` isn't yet opened, just to satisfy syntax.
+    local LUKS_CRYPT_MAPPER_NAME="lvm"
+    if cryptsetup status "$LUKS_CRYPT_MAPPER_NAME" >/dev/null 2>&1; then
+        echo "LUKS container '$LUKS_CRYPT_MAPPER_NAME' found. Closing..."
+        # No password needed for closing.
+        sudo cryptsetup close "$LUKS_CRYPT_MAPPER_NAME" || echo "Failed to close LUKS container '$LUKS_CRYPT_MAPPER_NAME'. Continuing..."
     fi
 
     echo "--- Cleanup complete. Proceeding with installation. ---"
@@ -124,13 +115,10 @@ cat << 'EOF_CHROOT_SCRIPT' > install_part2_chroot.sh
 # user setup, GRUB, swap, and service enabling.
 
 # Variables are passed as arguments from the host script.
-DEV_PASS="$1"
-ROOT_PASS="$2"
-USER_NAME="$3"
-USER_PASS="$4"
-TIME_ZONE="$5"
-EXISTING_EFI_PARTITION_IN_CHROOT="$6"
-LUKS_PARTITION_IN_CHROOT="$7"
+# No hardcoded passwords here. They will be prompted for.
+TIME_ZONE="$1"
+EXISTING_EFI_PARTITION_IN_CHROOT="$2"
+LUKS_PARTITION_IN_CHROOT="$3"
 
 echo "Starting Arch Linux installation script (Part 2: Chroot System Setup)..."
 
@@ -150,14 +138,20 @@ locale-gen
 
 # User and password setup
 echo "Setting root password..."
-echo "root:$ROOT_PASS" | chpasswd
-echo "Creating user '$USER_NAME' and setting password..."
-useradd -m -g users -G wheel "$USER_NAME"
-echo "$USER_NAME:$USER_PASS" | chpasswd
+read -s -p "Enter ROOT password: " ROOT_PASS_PROMPT
+echo
+echo "root:$ROOT_PASS_PROMPT" | chpasswd
+
+read -p "Enter desired username: " USER_NAME_PROMPT
+read -s -p "Enter password for $USER_NAME_PROMPT: " USER_PASS_PROMPT
+echo
+echo "Creating user '$USER_NAME_PROMPT' and setting password..."
+useradd -m -g users -G wheel "$USER_NAME_PROMPT"
+echo "$USER_NAME_PROMPT:$USER_PASS_PROMPT" | chpasswd
 
 # Add user to docker group
-echo "Adding user '$USER_NAME' to the 'docker' group..."
-gpasswd -a "$USER_NAME" docker
+echo "Adding user '$USER_NAME_PROMPT' to the 'docker' group..."
+gpasswd -a "$USER_NAME_PROMPT" docker
 
 # Grub installation and configuration
 echo "Installing Grub..."
@@ -211,12 +205,14 @@ mkfs.ext4 -F "$ARCH_BOOT_PARTITION" # Using Ext4 for /boot
 
 # Encrypt disk
 echo "Encrypting $LUKS_PARTITION with LUKS..."
-echo "$DEV_PASS" | cryptsetup -q luksFormat "$LUKS_PARTITION"
-echo "$DEV_PASS" | cryptsetup open --type luks "$LUKS_PARTITION" lvm
+read -s -p "Enter LUKS encryption password for $LUKS_PARTITION: " DEV_PASS_PROMPT
+echo
+echo "$DEV_PASS_PROMPT" | cryptsetup -q luksFormat "$LUKS_PARTITION"
+echo "$DEV_PASS_PROMPT" | cryptsetup open --type luks "$LUKS_PARTITION" lvm
 
 # Setup LVM on the encrypted volume
 echo "Setting up LVM on /dev/mapper/lvm..."
-pvcreate --dataalignment 1m /dev/mapper/lvm
+pvcreate -ff --dataalignment 1m /dev/mapper/lvm
 vgcreate vg0 /dev/mapper/lvm
 lvcreate -l +100%FREE vg0 -n lv0
 
@@ -256,13 +252,14 @@ cp install_part2_chroot.sh /mnt/install_part2_chroot.sh
 # Make the copied chroot script executable within the chroot
 chmod +x /mnt/install_part2_chroot.sh
 
-# Edit sudoers inside /mnt (already enabled in your previous script)
+# Edit sudoers inside /mnt
 echo "Enabling wheel group in sudoers..."
 sed -i "s/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/g" /mnt/etc/sudoers
 
 echo "Entering chroot environment to run Part 2..."
 # Execute the second part of the script within the chroot
-arch-chroot /mnt /install_part2_chroot.sh "$DEV_PASS" "$ROOT_PASS" "$USER_NAME" "$USER_PASS" "$TIME_ZONE" "$EXISTING_EFI_PARTITION" "$LUKS_PARTITION"
+# Pass TIME_ZONE to chroot script. Other variables (passwords/usernames) are prompted for inside chroot.
+arch-chroot /mnt /install_part2_chroot.sh "$TIME_ZONE" "$EXISTING_EFI_PARTITION" "$LUKS_PARTITION"
 
 echo "Exiting chroot environment and unmounting..."
 # Final unmount/cleanup after chroot script finishes
