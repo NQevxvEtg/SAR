@@ -5,10 +5,18 @@
 # It also generates and executes the second part of the installation script
 # within the chroot environment.
 
-# --- Configuration Variables (All prompts now) ---
-# These variables are intentionally left empty to ensure the script always prompts for values.
-# Only TIME_ZONE remains as a configurable variable in the script.
-TIME_ZONE="Etc/UTC" # CHANGE ME: Your desired timezone (e.g., "America/New_York")
+# WARNING: This script contains hardcoded passwords, which are left empty by default.
+# You MUST fill in these variables before running the script.
+# For production environments, consider more secure methods for password handling.
+
+# --- Configuration Variables (FILL THESE IN) ---
+DEV_PASS=""           # CHANGE ME: Your disk encryption password
+ROOT_PASS=""          # CHANGE ME: Your root password
+USER_NAME=""          # CHANGE ME: Your desired username
+USER_PASS=""          # CHANGE ME: Your user password
+WIFI_SSID=""          # CHANGE ME: Your Wi-Fi SSID (used only if you uncomment iwctl lines)
+WIFI_PASSWORD=""      # CHANGE ME: Your Wi-Fi password (used only if you uncomment iwctl lines)
+TIME_ZONE="Etc/UTC"   # CHANGE ME: Your desired timezone (e.g., "America/New_York")
 
 
 # --- IMPORTANT: PARTITION VARIABLES (SET BASED ON YOUR lsblk OUTPUT AFTER MANUAL PARTITIONING) ---
@@ -115,10 +123,13 @@ cat << 'EOF_CHROOT_SCRIPT' > install_part2_chroot.sh
 # user setup, GRUB, swap, and service enabling.
 
 # Variables are passed as arguments from the host script.
-# No hardcoded passwords here. They will be prompted for.
-TIME_ZONE="$1"
-EXISTING_EFI_PARTITION_IN_CHROOT="$2"
-LUKS_PARTITION_IN_CHROOT="$3"
+DEV_PASS="$1"
+ROOT_PASS="$2"
+USER_NAME="$3"
+USER_PASS="$4"
+TIME_ZONE="$5"
+EXISTING_EFI_PARTITION_IN_CHROOT="$6"
+LUKS_PARTITION_IN_CHROOT="$7"
 
 echo "Starting Arch Linux installation script (Part 2: Chroot System Setup)..."
 
@@ -138,20 +149,15 @@ locale-gen
 
 # User and password setup
 echo "Setting root password..."
-read -s -p "Enter ROOT password: " ROOT_PASS_PROMPT
-echo
-echo "root:$ROOT_PASS_PROMPT" | chpasswd
+echo "root:$ROOT_PASS" | chpasswd
 
-read -p "Enter desired username: " USER_NAME_PROMPT
-read -s -p "Enter password for $USER_NAME_PROMPT: " USER_PASS_PROMPT
-echo
-echo "Creating user '$USER_NAME_PROMPT' and setting password..."
-useradd -m -g users -G wheel "$USER_NAME_PROMPT"
-echo "$USER_NAME_PROMPT:$USER_PASS_PROMPT" | chpasswd
+echo "Creating user '$USER_NAME' and setting password..."
+useradd -m -g users -G wheel "$USER_NAME"
+echo "$USER_NAME:$USER_PASS" | chpasswd
 
 # Add user to docker group
-echo "Adding user '$USER_NAME_PROMPT' to the 'docker' group..."
-gpasswd -a "$USER_NAME_PROMPT" docker
+echo "Adding user '$USER_NAME' to the 'docker' group..."
+gpasswd -a "$USER_NAME" docker
 
 # Grub installation and configuration
 echo "Installing Grub..."
@@ -205,10 +211,13 @@ mkfs.ext4 -F "$ARCH_BOOT_PARTITION" # Using Ext4 for /boot
 
 # Encrypt disk
 echo "Encrypting $LUKS_PARTITION with LUKS..."
-read -s -p "Enter LUKS encryption password for $LUKS_PARTITION: " DEV_PASS_PROMPT
-echo
-echo "$DEV_PASS_PROMPT" | cryptsetup -q luksFormat "$LUKS_PARTITION"
-echo "$DEV_PASS_PROMPT" | cryptsetup open --type luks "$LUKS_PARTITION" lvm
+# Check if DEV_PASS is empty and prompt if it is
+if [ -z "$DEV_PASS" ]; then
+    read -s -p "Enter LUKS encryption password for $LUKS_PARTITION: " DEV_PASS
+    echo
+fi
+echo "$DEV_PASS" | cryptsetup -q luksFormat "$LUKS_PARTITION"
+echo "$DEV_PASS" | cryptsetup open --type luks "$LUKS_PARTITION" lvm
 
 # Setup LVM on the encrypted volume
 echo "Setting up LVM on /dev/mapper/lvm..."
@@ -258,8 +267,8 @@ sed -i "s/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/g" /mnt/etc/sudoers
 
 echo "Entering chroot environment to run Part 2..."
 # Execute the second part of the script within the chroot
-# Pass TIME_ZONE to chroot script. Other variables (passwords/usernames) are prompted for inside chroot.
-arch-chroot /mnt /install_part2_chroot.sh "$TIME_ZONE" "$EXISTING_EFI_PARTITION" "$LUKS_PARTITION"
+# Pass ALL config variables to chroot script.
+arch-chroot /mnt /install_part2_chroot.sh "$DEV_PASS" "$ROOT_PASS" "$USER_NAME" "$USER_PASS" "$TIME_ZONE" "$EXISTING_EFI_PARTITION" "$LUKS_PARTITION"
 
 echo "Exiting chroot environment and unmounting..."
 # Final unmount/cleanup after chroot script finishes
