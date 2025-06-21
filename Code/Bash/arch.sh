@@ -27,35 +27,80 @@ LUKS_PARTITION="/dev/nvme0n1p6"         # The new partition for the Arch LUKS co
 # --- Cleanup Function ---
 # This function attempts to unmount and deactivate previous installations.
 cleanup_previous_install() {
-    echo "Attempting to clean up any previous installation attempts..."
+    echo "--- Initiating Cleanup of Previous Installation Attempts ---"
 
-    # Unmount anything mounted under /mnt
+    # 1. Turn off any active swap on the target partitions or within the LVM
+    echo "Checking for and turning off active swap..."
+    # Check for swap on the LUKS partition itself
+    if swapon -s | grep "$LUKS_PARTITION" >/dev/null; then
+        echo "Swap found on $LUKS_PARTITION. Turning off..."
+        sudo swapoff "$LUKS_PARTITION" || echo "Failed to turn off swap on $LUKS_PARTITION."
+    fi
+    # Check for swap on any LVM logical volume (e.g., /dev/vg0/lv0)
+    if swapon -s | grep "/dev/mapper/vg0-lv0" >/dev/null; then
+        echo "Swap found on /dev/mapper/vg0-lv0. Turning off..."
+        sudo swapoff /dev/mapper/vg0-lv0 || echo "Failed to turn off swap on /dev/mapper/vg0-lv0."
+    fi
+    # Check for swap on the /boot partition
+    if swapon -s | grep "$ARCH_BOOT_PARTITION" >/dev/null; then
+        echo "Swap found on $ARCH_BOOT_PARTITION. Turning off..."
+        sudo swapoff "$ARCH_BOOT_PARTITION" || echo "Failed to turn off swap on $ARCH_BOOT_PARTITION."
+    fi
+    # Also check if any swapfile might be active if it was created.
+    if swapon -s | grep "/swapfile" >/dev/null; then
+        echo "Swapfile found. Turning off..."
+        sudo swapoff /swapfile || echo "Failed to turn off swapfile."
+    fi
+
+
+    # 2. Unmount any filesystems mounted under /mnt
+    echo "Attempting to unmount all mounts under /mnt..."
+    # Use umount -l (lazy unmount) as a fallback if -R fails due to device busy
+    sudo umount -R -l /mnt >/dev/null 2>&1
+    # Check again and try individual unmounts if -R failed
     if mountpoint -q /mnt/boot/EFI; then
         echo "Unmounting /mnt/boot/EFI..."
-        sudo umount /mnt/boot/EFI || echo "Failed to unmount /mnt/boot/EFI. Continuing..."
+        sudo umount -l /mnt/boot/EFI || echo "Failed to unmount /mnt/boot/EFI. Continuing..."
     fi
     if mountpoint -q /mnt/boot; then
         echo "Unmounting /mnt/boot..."
-        sudo umount /mnt/boot || echo "Failed to unmount /mnt/boot. Continuing..."
+        sudo umount -l /mnt/boot || echo "Failed to unmount /mnt/boot. Continuing..."
     fi
     if mountpoint -q /mnt; then
         echo "Unmounting /mnt..."
-        sudo umount /mnt || echo "Failed to unmount /mnt. Continuing..."
+        sudo umount -l /mnt || echo "Failed to unmount /mnt. Continuing..."
     fi
+    # Ensure /mnt is truly empty and ready
+    sudo rm -rf /mnt/* /mnt/.* >/dev/null 2>&1 # Clear any leftover files, ignore errors
 
-    # Deactivate LVM logical volumes
+
+    # 3. Deactivate LVM logical volumes and remove volume groups
+    echo "Checking for and deactivating LVM structures..."
+    # Check if vg0 exists and try to deactivate it
     if vgdisplay vg0 >/dev/null 2>&1; then
-        echo "Deactivating LVM logical volumes in vg0..."
-        sudo vgchange -an vg0 || echo "Failed to deactivate LVM volumes. Continuing..."
+        echo "Volume Group 'vg0' found. Deactivating..."
+        # First deactivate all logical volumes in vg0
+        sudo vgchange -an vg0 || echo "Failed to deactivate LVs in vg0. Continuing..."
+        # Then remove the volume group (this might fail if LVs are still active)
+        sudo vgremove -f vg0 || echo "Failed to remove Volume Group 'vg0'. Continuing..."
     fi
+    # Ensure no lingering LVM device mappings
+    sudo dmsetup remove_all >/dev/null 2>&1 || true # Remove all device mapper devices
 
-    # Close LUKS container
+    # 4. Close LUKS container
+    echo "Checking for and closing LUKS containers..."
     if cryptsetup status lvm >/dev/null 2>&1; then
-        echo "Closing LUKS container 'lvm'..."
-        echo "$DEV_PASS" | sudo cryptsetup close lvm || echo "Failed to close LUKS container. Continuing..."
+        echo "LUKS container 'lvm' found. Closing..."
+        echo "$DEV_PASS" | sudo cryptsetup close lvm || echo "Failed to close LUKS container 'lvm'. Continuing..."
+    fi
+    # Also attempt to close by device path if it was opened with a different name
+    if cryptsetup status "$LUKS_PARTITION_CRYPT_NAME" >/dev/null 2>&1; then
+        echo "LUKS container '$LUKS_PARTITION_CRYPT_NAME' found. Closing..."
+        echo "$DEV_PASS" | sudo cryptsetup close "$LUKS_PARTITION_CRYPT_NAME" || echo "Failed to close LUKS container '$LUKS_PARTITION_CRYPT_NAME'. Continuing..."
     fi
 
-    echo "Cleanup complete."
+    echo "--- Cleanup complete. Proceeding with installation. ---"
+    echo ""
 }
 
 # --- Call Cleanup Function at the beginning ---
@@ -221,8 +266,8 @@ arch-chroot /mnt /install_part2_chroot.sh "$DEV_PASS" "$ROOT_PASS" "$USER_NAME" 
 
 echo "Exiting chroot environment and unmounting..."
 # Final unmount/cleanup after chroot script finishes
-umount -R /mnt
-cryptsetup close lvm
+umount -R /mnt || echo "Failed final unmount of /mnt. You may need to manually reboot."
+cryptsetup close lvm || echo "Failed final close of lvm. You may need to manually reboot."
 
 echo "Arch Linux installation (Part 1) complete. Please review any errors above and then reboot."
 
