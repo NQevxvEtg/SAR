@@ -24,6 +24,43 @@ EXISTING_EFI_PARTITION="/dev/nvme0n1p1" # Your existing Windows EFI partition (F
 ARCH_BOOT_PARTITION="/dev/nvme0n1p5"    # The new partition created for Arch's /boot (1GB, Ext4)
 LUKS_PARTITION="/dev/nvme0n1p6"         # The new partition for the Arch LUKS container (rest of space)
 
+# --- Cleanup Function ---
+# This function attempts to unmount and deactivate previous installations.
+cleanup_previous_install() {
+    echo "Attempting to clean up any previous installation attempts..."
+
+    # Unmount anything mounted under /mnt
+    if mountpoint -q /mnt/boot/EFI; then
+        echo "Unmounting /mnt/boot/EFI..."
+        sudo umount /mnt/boot/EFI || echo "Failed to unmount /mnt/boot/EFI. Continuing..."
+    fi
+    if mountpoint -q /mnt/boot; then
+        echo "Unmounting /mnt/boot..."
+        sudo umount /mnt/boot || echo "Failed to unmount /mnt/boot. Continuing..."
+    fi
+    if mountpoint -q /mnt; then
+        echo "Unmounting /mnt..."
+        sudo umount /mnt || echo "Failed to unmount /mnt. Continuing..."
+    fi
+
+    # Deactivate LVM logical volumes
+    if vgdisplay vg0 >/dev/null 2>&1; then
+        echo "Deactivating LVM logical volumes in vg0..."
+        sudo vgchange -an vg0 || echo "Failed to deactivate LVM volumes. Continuing..."
+    fi
+
+    # Close LUKS container
+    if cryptsetup status lvm >/dev/null 2>&1; then
+        echo "Closing LUKS container 'lvm'..."
+        echo "$DEV_PASS" | sudo cryptsetup close lvm || echo "Failed to close LUKS container. Continuing..."
+    fi
+
+    echo "Cleanup complete."
+}
+
+# --- Call Cleanup Function at the beginning ---
+cleanup_previous_install
+
 
 echo "Starting Arch Linux installation script (Part 1: Host System Setup)..."
 
@@ -151,9 +188,9 @@ mkfs.xfs /dev/vg0/lv0
 # Mount partitions
 echo "Mounting file systems..."
 mount /dev/vg0/lv0 /mnt
-mkdir /mnt/boot
+mkdir -p /mnt/boot # Ensure /mnt/boot exists
 mount "$ARCH_BOOT_PARTITION" /mnt/boot
-mkdir /mnt/boot/EFI
+mkdir -p /mnt/boot/EFI # Ensure /mnt/boot/EFI exists
 # Mount the *existing Windows EFI* partition for shared bootloader access
 mount "$EXISTING_EFI_PARTITION" /mnt/boot/EFI
 
@@ -183,6 +220,7 @@ echo "Entering chroot environment to run Part 2..."
 arch-chroot /mnt /install_part2_chroot.sh "$DEV_PASS" "$ROOT_PASS" "$USER_NAME" "$USER_PASS" "$TIME_ZONE" "$EXISTING_EFI_PARTITION" "$LUKS_PARTITION"
 
 echo "Exiting chroot environment and unmounting..."
+# Final unmount/cleanup after chroot script finishes
 umount -R /mnt
 cryptsetup close lvm
 
