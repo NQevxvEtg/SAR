@@ -53,18 +53,25 @@ LUKS_PARTITION_IN_CHROOT="$7"
 echo "Starting Arch Linux installation script (Part 2: Chroot System Setup)..."
 
 # Install main packages
-echo "Installing core packages for Wayland, GNOME, and Docker..."
-pacman -Syu --noconfirm linux linux-headers linux-lts linux-lts-headers base-devel linux-firmware iwd networkmanager nftables net-tools terminator firefox git go keepassxc grub efibootmgr dosfstools os-prober mtools man rsync bash-completion zsh zsh-completions dnsutils gnome reflector tk code amd-ucode nvidia nvidia-lts nvidia-utils xorg-server xorg-apps xorg-xinit xf86-video-amdgpu mesa xorg-xwayland xfsprogs docker
+echo "Installing core packages for Wayland, GNOME, Docker, and console font..."
+# Added 'terminus-font' to the package list
+pacman -Syu --noconfirm linux linux-headers linux-lts linux-lts-headers base-devel linux-firmware iwd networkmanager nftables net-tools terminator firefox git go keepassxc grub efibootmgr dosfstools os-prober mtools man rsync bash-completion zsh zsh-completions dnsutils gnome reflector tk code amd-ucode nvidia nvidia-lts nvidia-utils xorg-server xorg-apps xorg-xinit xf86-video-amdgpu mesa xorg-xwayland xfsprogs docker terminus-font
 
 # Kernel mkinitcpio configuration
 echo "Updating mkinitcpio configuration..."
-sed -i "s/HOOKS=.*/HOOKS=(base udev autodetect modconf block encrypt lvm2 filesystems keyboard fsck)/g" /etc/mkinitcpio.conf
+# Added 'consolefont' hook
+sed -i "s/HOOKS=.*/HOOKS=(base udev autodetect modconf block encrypt lvm2 filesystems keyboard fsck consolefont)/g" /etc/mkinitcpio.conf
 mkinitcpio -P
 
 # Locale setup
 echo "Setting up locale..."
 sed -i "s/#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g" /etc/locale.gen
 locale-gen
+
+# Configure console font and keymap
+echo "Setting up console font and keymap..."
+echo "KEYMAP=us" > /etc/vconsole.conf # Default to US keymap
+echo "FONT=ter-v22b" >> /etc/vconsole.conf # Use Terminus font (adjust size if needed, e.g., ter-v16b)
 
 # User and password setup
 echo "Setting root password..."
