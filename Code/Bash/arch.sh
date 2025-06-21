@@ -54,13 +54,13 @@ echo "Starting Arch Linux installation script (Part 2: Chroot System Setup)..."
 
 # Install main packages
 echo "Installing core packages for Wayland, GNOME, Docker, and console font..."
-# Added 'terminus-font' to the package list
 pacman -Syu --noconfirm linux linux-headers linux-lts linux-lts-headers base-devel linux-firmware iwd networkmanager nftables net-tools terminator firefox git go keepassxc grub efibootmgr dosfstools os-prober mtools man rsync bash-completion zsh zsh-completions dnsutils gnome reflector tk code amd-ucode nvidia nvidia-lts nvidia-utils xorg-server xorg-apps xorg-xinit xf86-video-amdgpu mesa xorg-xwayland xfsprogs docker terminus-font
 
 # Kernel mkinitcpio configuration
 echo "Updating mkinitcpio configuration..."
-# Added 'consolefont' hook
-sed -i "s/HOOKS=.*/HOOKS=(base udev autodetect modconf block encrypt lvm2 filesystems keyboard fsck consolefont)/g" /etc/mkinitcpio.conf
+# Corrected HOOKS order: keyboard before encrypt, and consolefont before keyboard for early font.
+# fsck must be last among relevant hooks.
+sed -i "s/HOOKS=.*/HOOKS=(base udev autodetect modconf block keyboard encrypt lvm2 filesystems fsck consolefont)/g" /etc/mkinitcpio.conf
 mkinitcpio -P
 
 # Locale setup
@@ -92,6 +92,7 @@ cp /usr/share/locale/en\@quot/LC_MESSAGES/grub.mo /boot/grub/locale/en.mo
     
 # Configure GRUB for encrypted LVM and Wayland (NVIDIA KMS)
 echo "Updating GRUB configuration for encrypted LVM and Wayland (NVIDIA KMS if applicable)..."
+# Ensure cryptdevice syntax is correct: /dev/nvme0n1p6:lvm:allow-discards
 sed -i "s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"cryptdevice=${LUKS_PARTITION_IN_CHROOT}:lvm:allow-discards loglevel=3 quiet nvidia_modeset=1\"/g" /etc/default/grub
 sed -i "s/^GRUB_DEFAULT=.*/GRUB_DEFAULT=\"1>2\"/g" /etc/default/grub
     
@@ -173,7 +174,7 @@ genfstab -U -p /mnt >> /mnt/etc/fstab
 
 # Initial pacstrap
 echo "Running pacstrap..."
-# ADDED lvm2 to pacstrap for mkinitcpio requirements
+# ADDED lvm2 AND linux-firmware to pacstrap for mkinitcpio requirements
 pacstrap /mnt base vim xfsprogs linux-firmware lvm2
 
 # Copy nftables script and the generated chroot script to the target system
