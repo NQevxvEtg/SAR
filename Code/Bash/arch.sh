@@ -31,9 +31,9 @@ if [[ "$DEV_PASS" == "your_encryption_password" ]]; then
     exit 1
 fi
 
-# Check if part2_chroot.sh exists
-if [ ! -f ./part2_chroot.sh ]; then
-    echo "!!!!!! ERROR: part2_chroot.sh is not in the same directory as this script."
+# Check if arch2.sh exists
+if [ ! -f ./arch2.sh ]; then
+    echo "!!!!!! ERROR: arch2.sh is not in the same directory as this script."
     exit 1
 fi
 
@@ -74,9 +74,14 @@ echo "--> Stage 2 Complete."
 echo "--> Stage 3: Mounting & Pacstrap..."
 # Mount the new root filesystem
 mount /dev/vg0/root /mnt
-# Create mount points and mount the boot/EFI partitions
-mkdir -p /mnt/boot/EFI
+
+# ** CORRECTED MOUNTING ORDER **
+# Create the /boot mountpoint, then mount the boot partition
+mkdir -p /mnt/boot
 mount "$BOOT_PARTITION" /mnt/boot
+
+# AFTER mounting /boot, create the /boot/EFI mountpoint inside it
+mkdir -p /mnt/boot/EFI
 mount "$EFI_PARTITION" /mnt/boot/EFI
 
 # Run pacstrap to install the base system
@@ -92,10 +97,10 @@ echo "--> Generating fstab..."
 genfstab -U /mnt >> /mnt/etc/fstab
 
 # Copy the chroot script into the new system
-echo "--> Copying part2_chroot.sh to /mnt/root/..."
+echo "--> Copying arch2.sh to /mnt/root/..."
 mkdir -p /mnt/root
-cp ./part2_chroot.sh /mnt/root/part2_chroot.sh
-chmod +x /mnt/root/part2_chroot.sh
+cp ./arch2.sh /mnt/root/arch2.sh
+chmod +x /mnt/root/arch2.sh
 echo "--> Stage 4 Complete."
 
 
@@ -108,7 +113,7 @@ echo "Now, run these two commands to enter the new system and finish the install
 echo ""
 echo "  arch-chroot /mnt"
 echo ""
-echo "  /root/part2_chroot.sh"
+echo "  /root/arch2.sh"
 echo ""
 echo "------------------------------------------------------------------"
 
