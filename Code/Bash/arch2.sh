@@ -66,7 +66,8 @@ mkinitcpio -P
 # Configure GRUB bootloader
 LUKS_UUID=$(blkid -s UUID -o value "$LVM_PARTITION")
 sed -i "s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 quiet cryptdevice=UUID=${LUKS_UUID}:cryptlvm root=\/dev\/mapper\/vg0-root nvidia_modeset=1\"/" /etc/default/grub
-sed -i 's/^#GRUB_ENABLE_OS_PROBER=false/GRUB_ENABLE_OS_PROBER=true/' /etc/default/grub
+sed -i "s/^#GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/" /etc/default/grub
+sed -i 's/^[[:space:]]*#*GRUB_DEFAULT=.*/GRUB_DEFAULT="1>2"/' /etc/default/grub
 grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/boot/EFI --recheck
 grub-mkconfig -o /boot/grub/grub.cfg
 echo "--> Stage 7 Complete."
