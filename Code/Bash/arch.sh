@@ -1,115 +1,147 @@
 #!/bin/bash
+# shellcheck disable=SC2016,SC2086,SC2155
 
-# This script performs the initial setup on the Arch Linux Live ISO environment.
-# It sets up disk encryption, LVM, mounts filesystems, and runs pacstrap.
-# It also generates and executes the second part of the installation script
-# within the chroot environment.
+# This script performs an initial setup in the Arch Linux Live environment.
+# It sets up disk encryption with LUKS and a Btrfs filesystem with subvolumes
+# on PRE-EXISTING partitions, designed for a dual-boot scenario with Windows.
+# It bootstraps the base system and executes a chroot script to configure the new installation.
 
-# WARNING: This script contains hardcoded passwords, which are left empty by default.
-# You MUST fill in these variables before running the script.
-# For production environments, consider more secure methods for password handling.
+# WARNING: This script contains hardcoded passwords and settings.
+# You MUST fill in the configuration variables before running the script.
+
+set -euo pipefail # Fail on error, unset var, or pipe failure
 
 # --- Configuration Variables (FILL THESE IN) ---
-DEV_PASS=""           # CHANGE ME: Your disk encryption password
-ROOT_PASS=""          # CHANGE ME: Your root password
-USER_NAME=""          # CHANGE ME: Your desired username
-USER_PASS=""          # CHANGE ME: Your user password
-WIFI_SSID=""          # CHANGE ME: Your Wi-Fi SSID (used only if you uncomment iwctl lines)
-WIFI_PASSWORD=""      # CHANGE ME: Your Wi-Fi password (used only if you uncomment iwctl lines)
-TIME_ZONE="Etc/UTC"   # CHANGE ME: Your desired timezone (e.g., "America/New_York")
+DEV_PASS=""             # CHANGE ME: Your disk encryption password
+ROOT_PASS=""            # CHANGE ME: Your new system's root password
+USER_NAME=""            # CHANGE ME: Your desired username
+USER_PASS=""            # CHANGE ME: Your new user's password
+TIME_ZONE="Etc/UTC"     # CHANGE ME: Your timezone (e.g., "America/New_York")
+HOST_NAME="archlinux"   # CHANGE ME: Your desired hostname
+KEY_MAP="us"            # CHANGE ME: Your keyboard layout (e.g., "uk", "de")
+# WIFI_SSID=""          # UNCOMMENT/CHANGE ME: Your Wi-Fi SSID if needed
+# WIFI_PASSWORD=""      # UNCOMMENT/CHANGE ME: Your Wi-Fi password if needed
 
 
-# --- IMPORTANT: PARTITION VARIABLES (SET BASED ON YOUR lsblk OUTPUT AFTER MANUAL PARTITIONING) ---
-# Based on your `lsblk -f` and the manual partitioning steps:
-EXISTING_EFI_PARTITION="/dev/nvme0n1p1" # Your existing Windows EFI partition (FAT32)
-ARCH_BOOT_PARTITION="/dev/nvme0n1p5"    # The new partition created for Arch's /boot (1GB, Ext4)
-LUKS_PARTITION="/dev/nvme0n1p6"         # The new partition for the Arch LUKS container (rest of space)
+# --- PARTITION VARIABLES (SET BASED ON YOUR PROVIDED `lsblk -f` OUTPUT) ---
+# This script will NOT create partitions. It assumes they already exist.
+# IT WILL WIPE/FORMAT nvme0n1p5 and nvme0n1p6.
+# IT WILL NOT TOUCH nvme0n1p1, p2, p3, p4 (EFI and Windows partitions).
 
-echo "Starting Arch Linux installation script (Part 1: Host System Setup)..."
+EFI_PARTITION="/dev/nvme0n1p1"    # Your EXISTING Windows EFI partition. DO NOT FORMAT.
+BOOT_PARTITION="/dev/nvme0n1p5"   # The partition for Arch's /boot. WILL BE FORMATTED.
+BTRFS_PARTITION="/dev/nvme0n1p6"  # The partition for the Arch LUKS/Btrfs container. WILL BE WIPED.
 
-# Download nftables.sh
-echo "Downloading nftables.sh..."
-curl -o nftable.sh https://raw.githubusercontent.com/NQevxvEtg/SAR/main/Code/Bash/nftable.sh
-chmod +x nftable.sh
+# --- Script Start ---
+echo "--- Starting Arch Linux installation (Part 1: Host System Setup) ---"
+echo "--- CONFIGURATION: Btrfs on LUKS ---"
+echo "--- TARGETS: EFI on $EFI_PARTITION, /boot on $BOOT_PARTITION, root on $BTRFS_PARTITION ---"
+echo "--- WARNING: Data on $BOOT_PARTITION and $BTRFS_PARTITION will be destroyed. ---"
+echo "--- Windows partitions will NOT be touched. ---"
 
-# Create the second part of the installation script locally
-# This content will be copied to /mnt and executed in chroot
-cat << 'EOF_CHROOT_SCRIPT' > install_part2_chroot.sh
+# --- Password and Variable Check ---
+if [ -z "$DEV_PASS" ] || [ -z "$ROOT_PASS" ] || [ -z "$USER_NAME" ] || [ -z "$USER_PASS" ]; then
+    echo "ERROR: One or more required password/user variables are empty."
+    echo "Please edit the script and fill them in."
+    exit 1
+fi
+
+# --- System Clock ---
+echo "Synchronizing system clock..."
+timedatectl set-ntp true
+
+# --- Create Chroot Script ---
+echo "Generating the chroot configuration script (install_part2_chroot.sh)..."
+cat << 'EOF_CHROOT_SCRIPT' > /tmp/install_part2_chroot.sh
 #!/bin/bash
+set -euo pipefail
 
-# This script is executed inside the chroot environment (/mnt).
-# It handles post-pacstrap configuration, package installation,
-# user setup, GRUB, swap, and service enabling.
+# This script is executed inside the chroot environment.
 
 # Variables are passed as arguments from the host script.
-DEV_PASS="$1"
-ROOT_PASS="$2"
-USER_NAME="$3"
-USER_PASS="$4"
-TIME_ZONE="$5"
-EXISTING_EFI_PARTITION_IN_CHROOT="$6"
-LUKS_PARTITION_IN_CHROOT="$7"
+ROOT_PASS_CHROOT="$1"
+USER_NAME_CHROOT="$2"
+USER_PASS_CHROOT="$3"
+TIME_ZONE_CHROOT="$4"
+HOST_NAME_CHROOT="$5"
+KEY_MAP_CHROOT="$6"
+LUKS_UUID_CHROOT="$7"
 
-echo "Starting Arch Linux installation script (Part 2: Chroot System Setup)..."
+echo "--- Starting Arch Linux installation (Part 2: Chroot System Setup) ---"
 
-# Install main packages
-echo "Installing core packages for Wayland, GNOME, Docker, and console font..."
-pacman -Syu --noconfirm linux linux-headers linux-lts linux-lts-headers base-devel linux-firmware iwd networkmanager nftables net-tools terminator firefox git go keepassxc grub efibootmgr dosfstools os-prober mtools man rsync bash-completion zsh zsh-completions dnsutils gnome reflector tk code amd-ucode nvidia nvidia-lts nvidia-utils xorg-server xorg-apps xorg-xinit xf86-video-amdgpu mesa xorg-xwayland xfsprogs docker terminus-font
-
-# Kernel mkinitcpio configuration
-echo "Updating mkinitcpio configuration..."
-# Corrected HOOKS order: keyboard before encrypt, and consolefont before keyboard for early font.
-# fsck must be last among relevant hooks.
-sed -i "s/HOOKS=.*/HOOKS=(base udev autodetect modconf block keyboard encrypt lvm2 filesystems fsck consolefont)/g" /etc/mkinitcpio.conf
-mkinitcpio -P
-
-# Locale setup
-echo "Setting up locale..."
-sed -i "s/#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g" /etc/locale.gen
+# Timezone and Locale
+echo "Setting timezone, locale, and hostname..."
+ln -sf "/usr/share/zoneinfo/${TIME_ZONE_CHROOT}" /etc/localtime
+hwclock --systohc
+sed -i 's/#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g' /etc/locale.gen
 locale-gen
+echo "LANG=en_US.UTF-8" > /etc/locale.conf
+echo "${HOST_NAME_CHROOT}" > /etc/hostname
+echo "KEYMAP=${KEY_MAP_CHROOT}" > /etc/vconsole.conf
 
-# Configure console font and keymap
-echo "Setting up console font and keymap..."
-echo "KEYMAP=us" > /etc/vconsole.conf # Default to US keymap
-echo "FONT=ter-v22b" >> /etc/vconsole.conf # Use Terminus font (adjust size if needed, e.g., ter-v16b)
+# Hosts file
+cat > /etc/hosts <<EOF
+127.0.0.1   localhost
+::1         localhost
+127.0.1.1   ${HOST_NAME_CHROOT}.localdomain ${HOST_NAME_CHROOT}
+EOF
+
+# Install essential and user-requested packages
+echo "Installing core packages, drivers, and desktop environment..."
+pacman -Syu --noconfirm --needed \
+    base-devel linux-lts linux-lts-headers iwd networkmanager \
+    terminator firefox git go keepassxc grub efibootmgr dosfstools os-prober mtools \
+    man rsync bash-completion zsh zsh-completions dnsutils gnome reflector \
+    tk code amd-ucode intel-ucode nvidia nvidia-lts nvidia-settings nvidia-utils \
+    xorg-server xorg-apps xorg-xinit mesa xorg-wayland docker terminus-font
+
+# Configure mkinitcpio for encrypted Btrfs
+echo "Updating mkinitcpio configuration for Btrfs on LUKS..."
+# CORRECTED HOOKS: Removed lvm2, added btrfs.
+sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf kms block keyboard encrypt btrfs filesystems fsck)/' /etc/mkinitcpio.conf
+mkinitcpio -P # Regenerate initramfs images for all kernels
 
 # User and password setup
 echo "Setting root password..."
-echo "root:$ROOT_PASS" | chpasswd
+echo "root:${ROOT_PASS_CHROOT}" | chpasswd
 
-echo "Creating user '$USER_NAME' and setting password..."
-useradd -m -g users -G wheel "$USER_NAME"
-echo "$USER_NAME:$USER_PASS" | chpasswd
+echo "Creating user '${USER_NAME_CHROOT}' and setting password..."
+useradd -m -g users -G wheel "${USER_NAME_CHROOT}"
+echo "${USER_NAME_CHROOT}:${USER_PASS_CHROOT}" | chpasswd
+
+# Grant sudo access to the wheel group
+echo "Enabling sudo for the 'wheel' group..."
+sed -i 's/# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 
 # Add user to docker group
-echo "Adding user '$USER_NAME' to the 'docker' group..."
-gpasswd -a "$USER_NAME" docker
+echo "Adding user '${USER_NAME_CHROOT}' to the 'docker' group..."
+gpasswd -a "${USER_NAME_CHROOT}" docker
 
 # Grub installation and configuration
-echo "Installing Grub..."
-grub-install --target=x86_64-efi --bootloader-id=grub_uefi --recheck --efi-directory=/boot/EFI
+echo "Installing and configuring GRUB bootloader..."
+grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/boot/EFI --recheck
 cp /usr/share/locale/en\@quot/LC_MESSAGES/grub.mo /boot/grub/locale/en.mo
-    
-# Configure GRUB for encrypted LVM and Wayland (NVIDIA KMS)
-echo "Updating GRUB configuration for encrypted LVM and Wayland (NVIDIA KMS if applicable)..."
-# Ensure cryptdevice syntax is correct: /dev/nvme0n1p6:lvm:allow-discards
-sed -i "s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"cryptdevice=${LUKS_PARTITION_IN_CHROOT}:lvm:allow-discards loglevel=3 quiet nvidia_modeset=1\"/g" /etc/default/grub
-sed -i "s/^GRUB_DEFAULT=.*/GRUB_DEFAULT=\"1>2\"/g" /etc/default/grub
-    
+
+# Configure GRUB for encrypted Btrfs and enable os-prober
+echo "Updating GRUB configuration..."
+# NOTE: The root path points to the LUKS device with subvolume specified in rootflags.
+sed -i "s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 quiet cryptdevice=UUID=${LUKS_UUID_CHROOT}:cryptroot root=\/dev\/mapper\/cryptroot rootflags=subvol=@ nvidia_modeset=1\"/" /etc/default/grub
+sed -i 's/^#GRUB_ENABLE_OS_PROBER=false/GRUB_ENABLE_OS_PROBER=true/' /etc/default/grub
+sed -i 's/^GRUB_DEFAULT=.*/GRUB_DEFAULT=0/' /etc/default/grub
+
 grub-mkconfig -o /boot/grub/grub.cfg
 
-# Swap setup (Swap File on XFS)
-echo "Setting up 100GB swap file on XFS filesystem..."
-fallocate -l 100G /swapfile
-chmod 600 /swapfile
-mkswap /swapfile
-# Add to fstab
-echo '/swapfile none swap defaults 0 0' | tee -a /etc/fstab
-swapon /swapfile
-
-# Timezone setup
-echo "Setting timezone to $TIME_ZONE..."
-timedatectl set-timezone "$TIME_ZONE"
+# Setup Swap File on Btrfs
+echo "Setting up 100GB swap file on Btrfs..."
+# The /swap directory corresponds to the @swap subvolume
+BTRFS_SWAP_PATH="/swap/swapfile"
+truncate -s 0 "${BTRFS_SWAP_PATH}"
+chattr +C "${BTRFS_SWAP_PATH}"
+dd if=/dev/zero of="${BTRFS_SWAP_PATH}" bs=1G count=100 status=progress
+chmod 600 "${BTRFS_SWAP_PATH}"
+mkswap "${BTRFS_SWAP_PATH}"
+echo "${BTRFS_SWAP_PATH} none swap defaults 0 0" | tee -a /etc/fstab
+swapon "${BTRFS_SWAP_PATH}"
 
 # Enable services
 echo "Enabling systemd services..."
@@ -117,89 +149,91 @@ systemctl enable NetworkManager
 systemctl enable systemd-timesyncd
 systemctl enable gdm
 systemctl enable docker
+systemctl enable reflector.timer
 
-# Clean up the chroot script itself
+# Clean up
 echo "Cleaning up installer script from chroot environment..."
 rm /install_part2_chroot.sh
 
-echo "Arch Linux installation (Part 2) complete. You can now reboot and log in."
+echo "--- Arch Linux installation (Part 2) complete. ---"
+echo "You can now type 'exit', 'umount -R /mnt', and 'reboot'."
+
 EOF_CHROOT_SCRIPT
 
-chmod +x install_part2_chroot.sh
+# Make the generated chroot script executable
+chmod +x /tmp/install_part2_chroot.sh
 
-# --- Automated disk partitioning (fdisk) has been REMOVED. ---
-# This is now a MANUAL step you must perform before running this script
-# using `fdisk /dev/nvme0n1` to delete old Debian partitions and create new ones.
+# --- Formatting & Encryption ---
+echo "Formatting boot partition ($BOOT_PARTITION)..."
+mkfs.ext4 -F "$BOOT_PARTITION"
 
-# Format Arch-specific disks
-echo "Formatting Arch-specific partitions..."
-mkfs.ext4 -F "$ARCH_BOOT_PARTITION" # Using Ext4 for /boot
-# The existing Windows EFI partition ($EXISTING_EFI_PARTITION) is already FAT32 and shouldn't be reformatted.
+echo "Setting up LUKS encryption on $BTRFS_PARTITION..."
+echo -n "$DEV_PASS" | cryptsetup --verbose --batch luksFormat "$BTRFS_PARTITION"
+echo -n "$DEV_PASS" | cryptsetup open "$BTRFS_PARTITION" cryptroot
 
-# Encrypt disk
-echo "Encrypting $LUKS_PARTITION with LUKS..."
-# No prompt here. Expecting DEV_PASS to be filled in.
-echo "$DEV_PASS" | cryptsetup -q luksFormat "$LUKS_PARTITION"
-echo "$DEV_PASS" | cryptsetup open --type luks "$LUKS_PARTITION" lvm
+# --- Format Filesystem with Btrfs ---
+echo "Formatting LUKS container with Btrfs..."
+mkfs.btrfs -L ARCH_BTRFS /dev/mapper/cryptroot
 
-# Setup LVM on the encrypted volume
-echo "Setting up LVM on /dev/mapper/lvm..."
-pvcreate -ff --dataalignment 1m /dev/mapper/lvm
-vgcreate vg0 /dev/mapper/lvm
-lvcreate -l +100%FREE vg0 -n lv0
+# --- Btrfs Subvolume Setup ---
+echo "Mounting Btrfs root to create subvolumes..."
+mount /dev/mapper/cryptroot /mnt
 
-# Scan and activate LVM
-echo "Scanning and activating LVM..."
-modprobe dm_mod
-vgscan
-vgchange -ay
+echo "Creating Btrfs subvolumes..."
+btrfs subvolume create /mnt/@
+btrfs subvolume create /mnt/@home
+btrfs subvolume create /mnt/@log
+btrfs subvolume create /mnt/@cache
+btrfs subvolume create /mnt/@swap
 
-# Format the logical volume with XFS
-echo "Formatting /dev/vg0/lv0 with XFS..."
-mkfs.xfs /dev/vg0/lv0 
+# Unmount the top-level Btrfs volume
+umount /mnt
 
-# Mount partitions
-echo "Mounting file systems..."
-mount /dev/vg0/lv0 /mnt
-mkdir -p /mnt/boot # Ensure /mnt/boot exists
-mount "$ARCH_BOOT_PARTITION" /mnt/boot
-mkdir -p /mnt/boot/EFI # Ensure /mnt/boot/EFI exists
-# Mount the *existing Windows EFI* partition for shared bootloader access
-mount "$EXISTING_EFI_PARTITION" /mnt/boot/EFI
+# --- Mount Filesystems ---
+echo "Mounting filesystems with Btrfs subvolumes..."
+BTRFS_OPTS="noatime,compress=zstd,ssd,discard=async"
+mount -o "$BTRFS_OPTS,subvol=@" /dev/mapper/cryptroot /mnt
 
-# Generate fstab
-echo "Generating /mnt/etc/fstab..."
-mkdir -p /mnt/etc
-genfstab -U -p /mnt >> /mnt/etc/fstab
+# Create mount points
+mkdir -p /mnt/{boot,home,var/log,var/cache,swap}
 
-# Initial pacstrap
-echo "Running pacstrap..."
-# ADDED lvm2 AND linux-firmware to pacstrap for mkinitcpio requirements
-pacstrap /mnt base vim xfsprogs linux-firmware lvm2
+# Mount other subvolumes and partitions
+mount -o "$BTRFS_OPTS,subvol=@home" /dev/mapper/cryptroot /mnt/home
+mount -o "$BTRFS_OPTS,subvol=@log" /dev/mapper/cryptroot /mnt/var/log
+mount -o "$BTRFS_OPTS,subvol=@cache" /dev/mapper/cryptroot /mnt/var/cache
+# Swap subvolume has different options (no compression, no CoW already set)
+mount -o "noatime,subvol=@swap" /dev/mapper/cryptroot /mnt/swap
+mount "$BOOT_PARTITION" /mnt/boot
 
-# Copy nftables script and the generated chroot script to the target system
-echo "Copying scripts and files to /mnt..."
-cp nftable.sh /mnt/nftable.sh
-cp install_part2_chroot.sh /mnt/install_part2_chroot.sh
+# CRITICAL: Mount the existing EFI partition
+mkdir -p /mnt/boot/EFI
+mount "$EFI_PARTITION" /mnt/boot/EFI
 
-# Make the copied chroot script executable within the chroot
-chmod +x /mnt/install_part2_chroot.sh
+# --- Pacstrap ---
+echo "Running pacstrap to bootstrap the base system..."
+# Added btrfs-progs for filesystem tools
+pacstrap /mnt base linux linux-firmware btrfs-progs vim
 
-# Edit sudoers inside /mnt
-echo "Enabling wheel group in sudoers..."
-sed -i "s/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/g" /mnt/etc/sudoers
+# --- Final Configuration ---
+echo "Generating fstab..."
+genfstab -U /mnt >> /mnt/etc/fstab
 
-echo "Entering chroot environment to run Part 2..."
-# Execute the second part of the script within the chroot
-# Pass ALL config variables to chroot script.
-arch-chroot /mnt /install_part2_chroot.sh "$DEV_PASS" "$ROOT_PASS" "$USER_NAME" "$USER_PASS" "$TIME_ZONE" "$EXISTING_EFI_PARTITION" "$LUKS_PARTITION"
+LUKS_UUID=$(blkid -s UUID -o value "$BTRFS_PARTITION")
+echo "LUKS Partition UUID is: $LUKS_UUID"
 
-echo "Exiting chroot environment and unmounting (optional, manual reboot is expected for cleanup)..."
-# Final unmount/cleanup after chroot script finishes
-# These are left for a "best effort" unmount, but not critical for starting over as reboot will do it.
-umount -R /mnt || true
-cryptsetup close lvm || true
+echo "Copying chroot script to /mnt..."
+cp /tmp/install_part2_chroot.sh /mnt/install_part2_chroot.sh
 
-echo "Arch Linux installation (Part 1) complete. Please review any errors above and REBOOT before retrying."
+echo "Entering chroot environment to run Part 2 of the installation..."
+arch-chroot /mnt /install_part2_chroot.sh "$ROOT_PASS" "$USER_NAME" "$USER_PASS" "$TIME_ZONE" "$HOST_NAME" "$KEY_MAP" "$LUKS_UUID"
+
+# --- Post-Installation Cleanup ---
+echo "Chroot script finished. Unmounting filesystems..."
+umount -R /mnt
+cryptsetup close cryptroot
+
+echo "--- Installation Complete! ---"
+echo "You can now safely reboot your system."
 
 exit 0
+
