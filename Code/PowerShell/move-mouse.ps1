@@ -15,9 +15,9 @@ Add-Type -AssemblyName System.Windows.Forms
 
 while ($true)
 {
-  # Randomize within a 500x500 region
   $x = Get-Random -Minimum 1 -Maximum 500
   $y = Get-Random -Minimum 1 -Maximum 500
   [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($x, $y)
-  Start-Sleep -Seconds 10
+  $sleep = Get-Random -Minimum 20 -Maximum 36  # 36 is exclusive, between 20 and 35 seconds
+  Start-Sleep -Seconds $sleep
 }
