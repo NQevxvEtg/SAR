@@ -48,7 +48,8 @@ try {
         $ip = $row.ip
 
         # Append host entry and variables to YAML content
-        $yamlContent += "`n    $fqdn:"
+        # FIX: Use ${fqdn} to correctly delimit the variable name before the colon
+        $yamlContent += "`n    ${fqdn}:"
         $yamlContent += "`n      ansible_host: $ip"
         $yamlContent += "`n      ansible_port: $ansibleDefaultPort"
         $yamlContent += "`n      ansible_user: $ansibleDefaultUser"
