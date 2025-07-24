@@ -56,16 +56,25 @@ echo -e "\nStarting ssh-copy-id process..."
 
 SUCCESSFUL_SERVERS=()
 FAILED_SERVERS=()
+SKIPPED_SERVERS=() # To track servers skipped due to invalid hostnames
 
 # 5. Read server list and iterate
-# Using 'while read' loop to handle lines with spaces correctly (though not common for hostnames)
-# and to avoid issues with large files that 'cat' might have with command substitution.
-while IFS= read -r SERVER_HOST; do
-    # Remove leading/trailing whitespace
-    SERVER_HOST=$(echo "$SERVER_HOST" | xargs)
+while IFS= read -r SERVER_HOST_RAW; do
+    # Remove carriage returns (\r) and trim all leading/trailing whitespace
+    SERVER_HOST=$(echo "$SERVER_HOST_RAW" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
 
-    # Skip empty lines
+    # Skip empty lines after cleaning
     if [ -z "$SERVER_HOST" ]; then
+        continue
+    fi
+
+    # Basic hostname validation (optional but recommended)
+    # This regex is a simple check; a more robust one might be needed for all edge cases
+    # It checks for valid characters: letters, numbers, hyphens, and dots.
+    # It also ensures it doesn't start or end with a hyphen or dot, and has at least one non-hyphen/dot character.
+    if ! [[ "$SERVER_HOST" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$ ]]; then
+        echo "Warning: Skipped '${SERVER_HOST_RAW}' - Cleaned hostname '${SERVER_HOST}' appears invalid or contains unsupported characters." >&2
+        SKIPPED_SERVERS+=("$SERVER_HOST_RAW")
         continue
     fi
 
@@ -73,8 +82,6 @@ while IFS= read -r SERVER_HOST; do
     echo -e "\nAttempting to copy ID to ${TARGET}..."
 
     # Use sshpass to provide the password to ssh-copy-id
-    # -o StrictHostKeyChecking=no and -o UserKnownHostsFile=/dev/null are for automation.
-    # For production, consider removing them and managing known_hosts properly.
     if sshpass -p "$SSH_PASSWORD" ssh-copy-id \
         -o StrictHostKeyChecking=no \
         -o UserKnownHostsFile=/dev/null \
@@ -104,9 +111,19 @@ if [ ${#FAILED_SERVERS[@]} -gt 0 ]; then
     for s in "${FAILED_SERVERS[@]}"; do
         echo "  - $s"
     done
-else
-    echo -e "\nAll specified servers were successfully updated."
 fi
+
+if [ ${#SKIPPED_SERVERS[@]} -gt 0 ]; then
+    echo -e "\nSkipped due to invalid/malformed hostname:"
+    for s in "${SKIPPED_SERVERS[@]}"; do
+        echo "  - '$s' (original entry)"
+    done
+fi
+
+if [ ${#SUCCESSFUL_SERVERS[@]} -eq 0 ] && [ ${#FAILED_SERVERS[@]} -eq 0 ] && [ ${#SKIPPED_SERVERS[@]} -eq 0 ]; then
+    echo -e "\nNo server entries were processed from the list."
+fi
+
 
 # Clear password from memory (best effort, not foolproof in Bash)
 unset SSH_PASSWORD
