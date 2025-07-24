@@ -1,41 +1,25 @@
 ---
-# This playbook copies your SSH public key to remote servers.
-# It uses the 'authorized_key' module, which is idempotent.
-
 - name: Ensure SSH public key is present on all servers
-  hosts: all_servers # Target all servers defined in your inventory under the 'all_servers' group
-  gather_facts: false # No need to gather facts for this simple task, speeds it up
+  hosts: all_servers
+  gather_facts: false
   vars_files:
     - ../vaults/vault.yml
   vars:
     ansible_remote_tmp: /var/ansible_tmp
-    # Path to your local SSH public key file.
-    # Replace with the actual path if it's not the default.
     ssh_public_key_path: "~/.ssh/id_rsa.pub"
-    # Or, if you use a different key:
-    # ssh_public_key_path: "~/.ssh/id_ed25519.pub"
-
-    # The user on the remote server to which the key will be added.
-    # This user must exist on the remote server.
     remote_user: "your_ssh_username" # <--- IMPORTANT: Replace with the actual remote username
 
   tasks:
     - name: Read SSH public key from local file
-      # The 'slurp' module reads a file from the control node and returns its content base64-encoded.
-      # We then decode it to get the raw key content.
       slurp:
         src: "{{ ssh_public_key_path }}"
       register: ssh_key_content_slurp_result
-      delegate_to: localhost # This task runs on the control node, not the remote server
+      delegate_to: localhost
 
     - name: Add SSH public key to remote user's authorized_keys
-      # The 'authorized_key' module manages SSH authorized keys.
-      # It's idempotent: if the key is already there, it does nothing.
       authorized_key:
         user: "{{ remote_user }}"
-        state: present # Ensure the key is present
+        state: present
         key: "{{ ssh_key_content_slurp_result['content'] | b64decode }}"
-        # The 'key' parameter expects the actual public key string.
-        # We decode the base64 content from the 'slurp' module.
-      become: true # Use 'sudo' (or equivalent) on the remote server if needed to write to the user's .ssh directory
-      become_user: "{{ remote_user }}" # Become the remote user to write the key
+      become: true
+      become_user: "{{ remote_user }}"
