@@ -7,7 +7,7 @@
   vars:
     ansible_remote_tmp: /var/ansible_tmp
     ssh_public_key_path: "~/.ssh/id_rsa.pub"
-    remote_user: "your_ssh_username" # <--- IMPORTANT: Replace with the actual remote username
+    target_ssh_user: "your_ssh_username" # <--- IMPORTANT: Replace with the actual remote username
 
   tasks:
     - name: Read SSH public key from local file
@@ -18,8 +18,8 @@
 
     - name: Add SSH public key to remote user's authorized_keys
       authorized_key:
-        user: "{{ remote_user }}"
+        user: "{{ target_ssh_user }}"
         state: present
         key: "{{ ssh_key_content_slurp_result['content'] | b64decode }}"
       become: true
-      become_user: "{{ remote_user }}"
+      become_user: "{{ target_ssh_user }}"
