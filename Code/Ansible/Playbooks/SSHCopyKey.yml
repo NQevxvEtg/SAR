@@ -5,7 +5,8 @@
 - name: Ensure SSH public key is present on all servers
   hosts: all_servers # Target all servers defined in your inventory under the 'all_servers' group
   gather_facts: false # No need to gather facts for this simple task, speeds it up
-
+  vars_files:
+    - ../vaults/vault.yml
   vars:
     ansible_remote_tmp: /var/ansible_tmp
     # Path to your local SSH public key file.
